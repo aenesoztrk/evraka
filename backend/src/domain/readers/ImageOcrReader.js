@@ -1,11 +1,10 @@
-import { createWorker } from "tesseract.js";
 import sharp from "sharp";
-import { env } from "../../config/env.js";
 import { BaseDocumentReader } from "./BaseDocumentReader.js";
 import { parsePlainText } from "./fieldParser.js";
+import { createOcrWorker } from "../../utils/ocr.js";
 
 async function calculateInkRatio(buffer, leftRatio, topRatio, widthRatio, heightRatio) {
-  const image = sharp(buffer).greyscale();
+  const image = sharp(buffer).flatten({ background: "#ffffff" }).greyscale();
   const metadata = await image.metadata();
   const left = Math.max(0, Math.floor(metadata.width * leftRatio));
   const top = Math.max(0, Math.floor(metadata.height * topRatio));
@@ -17,27 +16,58 @@ async function calculateInkRatio(buffer, leftRatio, topRatio, widthRatio, height
   return dark / (info.width * info.height);
 }
 
-export async function analyzeApprovalRegions(buffer) {
+export async function analyzeApprovalRegions(buffer, { continuationPage = false } = {}) {
+  const studentRegion = continuationPage
+    ? [0.24, 0.01, 0.26, 0.11]
+    : [0.27, 0.88, 0.23, 0.10];
   const [studentInk, advisorInk, employerInk] = await Promise.all([
-    calculateInkRatio(buffer, 0.02, 0.72, 0.30, 0.20),
-    calculateInkRatio(buffer, 0.35, 0.72, 0.28, 0.20),
-    calculateInkRatio(buffer, 0.66, 0.62, 0.32, 0.30),
+    calculateInkRatio(buffer, ...studentRegion),
+    calculateInkRatio(buffer, 0.54, 0.88, 0.27, 0.10),
+    calculateInkRatio(buffer, 0.52, 0.72, 0.36, 0.12),
   ]);
   return {
+    approvalAnalysisAvailable: true,
     approvalRegions: { studentInk, advisorInk, employerInk },
-    studentApprovalSignal: studentInk > 0.085,
-    advisorApprovalSignal: advisorInk > 0.085,
-    employerSignatureSignal: employerInk > 0.05,
-    employerStampSignal: employerInk > 0.075,
+    studentApprovalSignal: studentInk > 0.026,
+    advisorApprovalSignal: advisorInk > 0.026,
+    employerSignatureSignal: employerInk > 0.024,
+    // Printed table borders and labels can create roughly 8% dark pixels in this
+    // region. A stamp is substantially denser, so keep its threshold separate
+    // from the signature threshold to avoid treating printed text as a stamp.
+    employerStampSignal: employerInk > 0.12,
+  };
+}
+
+export function mergeApprovalMeta(items) {
+  const available = items.filter((item) => item?.approvalAnalysisAvailable);
+  if (!available.length) return { approvalAnalysisAvailable: false };
+  return {
+    approvalAnalysisAvailable: true,
+    approvalRegions: {
+      studentInk: Math.max(...available.map((item) => item.approvalRegions.studentInk)),
+      advisorInk: Math.max(...available.map((item) => item.approvalRegions.advisorInk)),
+      employerInk: Math.max(...available.map((item) => item.approvalRegions.employerInk)),
+    },
+    studentApprovalSignal: available.some((item) => item.studentApprovalSignal),
+    advisorApprovalSignal: available.some((item) => item.advisorApprovalSignal),
+    employerSignatureSignal: available.some((item) => item.employerSignatureSignal),
+    employerStampSignal: available.some((item) => item.employerStampSignal),
   };
 }
 
 export class ImageOcrReader extends BaseDocumentReader {
   async read(file) {
-    const worker = await createWorker(env.ocrLanguage);
+    const worker = await createOcrWorker();
     try {
-      const prepared = await sharp(file.buffer).greyscale().normalize().sharpen().toBuffer();
-      await worker.setParameters({ tessedit_pageseg_mode: "6", preserve_interword_spaces: "1" });
+      const source = sharp(file.buffer).flatten({ background: "#ffffff" });
+      const metadata = await source.metadata();
+      const preparedSource = metadata.width < 1600 ? source.resize({ width: 1600, withoutEnlargement: false }) : source;
+      const prepared = await preparedSource
+        .greyscale()
+        .normalize()
+        .sharpen()
+        .toBuffer();
+      await worker.setParameters({ tessedit_pageseg_mode: "11", preserve_interword_spaces: "1" });
       const result = await worker.recognize(prepared);
       const approvalMeta = await analyzeApprovalRegions(prepared);
       return {
@@ -46,6 +76,7 @@ export class ImageOcrReader extends BaseDocumentReader {
         meta: {
           method: "tesseract-ocr",
           confidence: result.data.confidence,
+          processedPages: 1,
           ...approvalMeta,
         },
       };

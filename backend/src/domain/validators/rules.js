@@ -1,5 +1,5 @@
 import { ValidationRule } from "./ValidationRule.js";
-import { calculateInternshipDays, daysBetween } from "../../utils/date.js";
+import { calculateInternshipDays, daysBetween, toUtcCalendarDate } from "../../utils/date.js";
 import { getPath, normalizeDate, normalizePhone, normalizeText, toComparable } from "../../utils/normalization.js";
 
 function fullAddress(value) {
@@ -98,15 +98,15 @@ export class AcademicDateRule extends ValidationRule {
     const start = getPath(data, "company.startDate") || application.internshipStart;
     const end = getPath(data, "company.endDate") || application.internshipEnd;
     const leadDays = daysBetween(application.createdAt, start);
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || startDate > endDate) issues.push("Staj başlangıç ve bitiş tarihleri geçerli ve sıralı olmalıdır.");
-    if (match && !Number.isNaN(startDate.getTime())) {
+    const startDate = toUtcCalendarDate(start);
+    const endDate = toUtcCalendarDate(end);
+    if (!startDate || !endDate || startDate > endDate) issues.push("Staj başlangıç ve bitiş tarihleri geçerli ve sıralı olmalıdır.");
+    if (match && startDate && endDate) {
       const firstYear = Number(match[1]);
       const lastYear = Number(match[2]);
       if (startDate.getUTCFullYear() < firstYear || startDate.getUTCFullYear() > lastYear || endDate.getUTCFullYear() < firstYear || endDate.getUTCFullYear() > lastYear) issues.push("Staj tarihleri öğretim yılıyla uyumlu değildir.");
     }
-    const suggestedSubmissionDate = !Number.isNaN(startDate.getTime()) ? new Date(startDate.getTime() - 30 * 86_400_000).toISOString().slice(0, 10) : undefined;
+    const suggestedSubmissionDate = startDate ? new Date(startDate.getTime() - 30 * 86_400_000).toISOString().slice(0, 10) : undefined;
     if (leadDays !== null && leadDays < 30) issues.push(`Belge başlangıçtan en az 30 gün önce teslim edilmelidir. Önerilen son teslim: ${suggestedSubmissionDate}.`);
     return issues.length ? this.result("error", issues.join(" "), "company.startDate", { suggestedSubmissionDate, leadDays }) : this.result("success", "Öğretim yılı, tarih sırası ve 30 gün teslim kuralı uygun.", undefined, { suggestedSubmissionDate, leadDays });
   }
@@ -129,16 +129,24 @@ export class InternshipDaysRule extends ValidationRule {
 
 export class EmployerApprovalRule extends ValidationRule {
   constructor() { super("APPROVALS", "İmza ve onay alanları"); }
-  validate({ data, extractionMeta }) {
-    const studentSigned = Boolean(extractionMeta.studentApprovalSignal) || Boolean(getPath(data, "approvals.studentSigned"));
-    const advisorSigned = Boolean(extractionMeta.advisorApprovalSignal) || Boolean(getPath(data, "approvals.advisorSigned"));
-    const employerSigned = Boolean(extractionMeta.employerSignatureSignal) || Boolean(getPath(data, "employer.signaturePresent"));
-    const employerStamped = Boolean(extractionMeta.employerStampSignal) || Boolean(getPath(data, "employer.stampPresent"));
+  validate({ data, extractionMeta = {} }) {
+    const visualAnalysis = Boolean(extractionMeta.approvalAnalysisAvailable);
+    const manualStudentSigned = Boolean(getPath(data, "approvals.studentSigned"));
+    const manualAdvisorSigned = Boolean(getPath(data, "approvals.advisorSigned"));
+    const employerSigned = Boolean(getPath(data, "employer.signaturePresent")) || (visualAnalysis && Boolean(extractionMeta.employerSignatureSignal));
+    const employerStamped = Boolean(getPath(data, "employer.stampPresent")) || (visualAnalysis && Boolean(extractionMeta.employerStampSignal));
     const issues = [];
-    if (studentSigned) issues.push("Öğrenci onay kısmı boş olmalıdır.");
-    if (advisorSigned) issues.push("Staj danışmanı onay kısmı boş olmalıdır.");
+    if (manualStudentSigned) issues.push("Öğrenci onay kısmı boş olmalıdır.");
+    if (manualAdvisorSigned) issues.push("Staj danışmanı onay kısmı boş olmalıdır.");
     if (!employerSigned || !employerStamped) issues.push("İşveren alanında imza ve kaşe bulunmalıdır.");
-    return issues.length ? this.result("error", issues.join(" "), "approvals") : this.result("success", "Onay alanları beklenen durumda.");
+    if (issues.length) return this.result("error", issues.join(" "), "approvals");
+
+    const visualWarnings = [];
+    if (visualAnalysis && extractionMeta.studentApprovalSignal && !manualStudentSigned) visualWarnings.push("Öğrenci onay alanında mürekkep algılandı; alanın boş olduğunu görsel olarak kontrol edin.");
+    if (visualAnalysis && extractionMeta.advisorApprovalSignal && !manualAdvisorSigned) visualWarnings.push("Danışman onay alanında mürekkep algılandı; alanın boş olduğunu görsel olarak kontrol edin.");
+    return visualWarnings.length
+      ? this.result("warning", visualWarnings.join(" "), "approvals", { requiresManualReview: true })
+      : this.result("success", "Onay alanları beklenen durumda.");
   }
 }
 

@@ -18,6 +18,7 @@ lab3-proje/
 
 ```bash
 npm run install:all
+npm --prefix backend run prepare:ocr
 npm run dev
 ```
 
@@ -36,7 +37,8 @@ Backend ilk açılışta `ADMIN_BOOTSTRAP_EMAIL` ve `ADMIN_BOOTSTRAP_PASSWORD` t
 - Manuel Ek-16 bilgi formu ve MongoDB kaydı
 - DOC, DOCX, PDF, JPEG ve PNG yükleme
 - Dosya boyutu, MIME ve gerçek dosya imzası kontrolü
-- Belge içeriğinin okunması ve manuel verilerle karşılaştırılması
+- Metin katmanlı DOC/DOCX/PDF içeriğinin okunması ve manuel verilerle bilgi amaçlı karşılaştırılması
+- Görsel ve taranmış PDF OCR işlemlerinin final aşamasına ertelenmesi
 - NYP prensiplerine göre okuyucu ve doğrulama sınıf hiyerarşisi
 
 ## Final kapsamı
@@ -62,6 +64,6 @@ Mimari ve endpoint ayrıntıları için [docs/architecture.md](docs/architecture
 ## Teknik notlar
 
 - Belgeler proje kolaylığı için MongoDB `Buffer` alanında tutulur. Büyük ölçekli üretimde GridFS veya nesne depolama önerilir.
-- Görsel OCR ilk çalışmada Tesseract dil verisini indirir. İnternetsiz ortamda dil verileri yerel sağlanmalıdır.
+- Görsel OCR dil dosyaları `npm --prefix backend run prepare:ocr` komutuyla proje içindeki `.cache/tesseract` klasörüne hazırlanır. Sunucuda bu komutu kurulumdan sonra bir kez çalıştırın.
 - Metin katmanı olmayan taranmış PDF’lerin ilk beş sayfası görsele çevrilerek Tesseract OCR ile okunur.
 - Google Form gönderimi için formun `entry.123456` benzeri alan kimliklerinin `entryMap` içinde eşlenmesi gerekir.

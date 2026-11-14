@@ -32,6 +32,24 @@ function assertEk16Content(text) {
 
 const validatorEngine = new ValidatorEngine();
 
+function midtermReport(extractionMeta = {}) {
+  const message = extractionMeta.requiresOcr
+    ? "Dosya biçimi, uzantısı, boyutu ve gerçek dosya imzası uygun. OCR final aşamasında çalıştırılacaktır."
+    : "Dosya biçimi, uzantısı, boyutu ve gerçek dosya imzası uygun.";
+  return [{ code: "MIDTERM_FILE", title: "Vize dosya kontrolü", status: "success", message }];
+}
+
+export function documentProcessingPlan(stage, mimeType) {
+  const finalStage = stage === "final";
+  const image = ["image/jpeg", "image/png"].includes(mimeType);
+  return {
+    stage: finalStage ? "final" : "midterm",
+    deferEntireReader: !finalStage && image,
+    allowOcr: finalStage,
+    analyzeApprovals: finalStage,
+  };
+}
+
 function assertFileSignature(file) {
   const bytes = file.buffer;
   const matches = {
@@ -54,6 +72,24 @@ function mergeDeep(target, source) {
   return output;
 }
 
+export async function refreshApplicationValidation(application) {
+  application.comparisonReport = compareManualAndExtracted(application.manualData, application.extractedData || {});
+  if (application.stage === "final") {
+    const studentNo = getPath(application.manualData, "student.studentNo");
+    const datasetRecord = studentNo ? await DatasetRecord.findOne({ studentNo }).sort({ createdAt: -1 }) : null;
+    const currentUser = await User.findById(application.student).select("+identityNo");
+    const contextData = mergeDeep(application.extractedData, application.manualData);
+    application.validationReport = validatorEngine.run({ data: contextData, application, extractionMeta: application.extractionMeta || {}, datasetRecord, currentUser });
+    const blockingComparison = application.comparisonReport.some((item) => ["mismatch", "missing-document", "missing-manual"].includes(item.status));
+    application.readiness = validatorEngine.isReady(application.validationReport) && !blockingComparison;
+  } else {
+    application.validationReport = midtermReport(application.extractionMeta);
+    application.readiness = true;
+  }
+  application.status = application.readiness ? "approved" : "error";
+  return application;
+}
+
 export async function processDocumentUpload({ applicationId, studentId, file, stage = "midterm", isAdmin = false }) {
   assertFileSignature(file);
   assertExtension(file);
@@ -63,7 +99,8 @@ export async function processDocumentUpload({ applicationId, studentId, file, st
   if (!isAdmin) application.assertStudentMutable();
 
   application.status = "reviewing";
-  application.stage = stage;
+  const processingPlan = documentProcessingPlan(stage, file.mimetype);
+  application.stage = processingPlan.stage;
   application.document = {
     originalName: file.originalname,
     mimeType: file.mimetype,
@@ -74,32 +111,22 @@ export async function processDocumentUpload({ applicationId, studentId, file, st
   await application.save();
 
   try {
-    const reader = DocumentReaderFactory.create(file.mimetype);
-    const extraction = await reader.read(file);
-    assertEk16Content(extraction.text);
+    const extraction = processingPlan.deferEntireReader
+      ? { data: {}, text: "", meta: { method: "image-ocr-deferred", processedPages: 0, requiresOcr: true, approvalAnalysisAvailable: false } }
+      : await DocumentReaderFactory.create(file.mimetype).read(file, {
+        allowOcr: processingPlan.allowOcr,
+        analyzeApprovals: processingPlan.analyzeApprovals,
+      });
+    if (application.stage === "final") assertEk16Content(extraction.text);
     application.extractedData = extraction.data;
     application.extractionMeta = extraction.meta;
-    application.comparisonReport = compareManualAndExtracted(application.manualData, extraction.data);
-
-    if (stage === "final") {
-      const studentNo = getPath(application.manualData, "student.studentNo");
-      const datasetRecord = studentNo ? await DatasetRecord.findOne({ studentNo }).sort({ createdAt: -1 }) : null;
-      const currentUser = await User.findById(application.student).select("+identityNo");
-      const contextData = mergeDeep(extraction.data, application.manualData);
-      application.validationReport = validatorEngine.run({ data: contextData, application, extractionMeta: extraction.meta, datasetRecord, currentUser });
-      const blockingComparison = application.comparisonReport.some((item) => ["mismatch", "missing-document", "missing-manual"].includes(item.status));
-      application.readiness = validatorEngine.isReady(application.validationReport) && !blockingComparison;
-    } else {
-      application.validationReport = [{ code: "MIDTERM_FILE", title: "Vize dosya kontrolü", status: "success", message: "Dosya biçimi ve boyutu uygun." }];
-      application.readiness = !application.comparisonReport.some((item) => item.status === "mismatch");
-    }
+    await refreshApplicationValidation(application);
 
     const start = getPath(application.manualData, "company.startDate");
     const end = getPath(application.manualData, "company.endDate");
     if (start && end && application.selectedWeekdays.length) {
       application.calculatedInternshipDays = calculateInternshipDays(start, end, application.selectedWeekdays);
     }
-    application.status = application.readiness ? "approved" : "error";
     await application.save();
     return application;
   } catch (error) {

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { AddressRule, ContactRule, DatasetMatchRule, EngineerCountRule, IdentityRule, UserMatchRule } from "../src/domain/validators/rules.js";
+import { AcademicDateRule, AddressRule, ContactRule, DatasetMatchRule, EmployerApprovalRule, EngineerCountRule, IdentityRule, UserMatchRule } from "../src/domain/validators/rules.js";
 
 test("T.C. kimlik numarası biçimini kabul eder", () => {
   const result = new IdentityRule().validate({ data: { student: { identityNo: "12345678901", nationality: "T.C." } } });
@@ -46,5 +46,39 @@ test("öğrenci ve kurum iletişim biçimlerini birlikte doğrular", () => {
 
 test("eksik ilçe ve il içeren adresi reddeder", () => {
   const result = new AddressRule().validate({ data: { student: { address: "Mah. Sok. No 1 Daire 2" }, company: { address: "Mah. Cad. No 5" } } });
+  assert.equal(result.status, "error");
+});
+
+test("aynı takvim günündeki saat farkı 30 günlük teslim kuralını bozmaz", () => {
+  const result = new AcademicDateRule().validate({
+    data: { student: { academicYear: "2026-2027" }, company: { startDate: "2027-06-21", endDate: "2027-07-16" } },
+    application: { createdAt: new Date("2027-05-22T23:30:00+03:00") },
+  });
+  assert.equal(result.status, "success");
+  assert.equal(result.details.leadDays, 30);
+});
+
+test("işveren imza ve kaşesini görsel analiz veya manuel bilgiyle kabul eder", () => {
+  const result = new EmployerApprovalRule().validate({
+    data: { employer: {}, approvals: {} },
+    extractionMeta: { approvalAnalysisAvailable: true, employerSignatureSignal: true, employerStampSignal: true },
+  });
+  assert.equal(result.status, "success");
+});
+
+test("öğrenci onayında görsel şüpheyi manuel inceleme uyarısı yapar", () => {
+  const result = new EmployerApprovalRule().validate({
+    data: { employer: { signaturePresent: true, stampPresent: true }, approvals: {} },
+    extractionMeta: { approvalAnalysisAvailable: true, studentApprovalSignal: true },
+  });
+  assert.equal(result.status, "warning");
+  assert.equal(result.details.requiresManualReview, true);
+});
+
+test("manuel olarak dolu işaretlenen öğrenci onayını reddeder", () => {
+  const result = new EmployerApprovalRule().validate({
+    data: { employer: { signaturePresent: true, stampPresent: true }, approvals: { studentSigned: true } },
+    extractionMeta: { approvalAnalysisAvailable: true },
+  });
   assert.equal(result.status, "error");
 });

@@ -1,45 +1,70 @@
 import pdfParse from "pdf-parse";
 import { pdf } from "pdf-to-img";
-import { createWorker } from "tesseract.js";
-import { env } from "../../config/env.js";
+import sharp from "sharp";
 import { BaseDocumentReader } from "./BaseDocumentReader.js";
 import { parsePlainText } from "./fieldParser.js";
-import { analyzeApprovalRegions } from "./ImageOcrReader.js";
+import { analyzeApprovalRegions, mergeApprovalMeta } from "./ImageOcrReader.js";
+import { createOcrWorker } from "../../utils/ocr.js";
 
 export class PdfReader extends BaseDocumentReader {
-  async read(file) {
+  async read(file, { allowOcr = true, analyzeApprovals = true } = {}) {
     const parsed = await pdfParse(file.buffer);
-    if (parsed.text.trim().length < 80) {
-      const document = await pdf(`data:application/pdf;base64,${file.buffer.toString("base64")}`, { scale: 2 });
-      const worker = await createWorker(env.ocrLanguage);
-      const texts = [];
-      const confidences = [];
-      let approvalMeta = {};
-      try {
-        let pageNumber = 0;
-        for await (const image of document) {
-          pageNumber += 1;
-          if (pageNumber > 5) break;
-          const result = await worker.recognize(image);
-          texts.push(result.data.text);
-          confidences.push(result.data.confidence);
-          if (pageNumber === 1) approvalMeta = await analyzeApprovalRegions(image);
-        }
-      } finally {
-        await worker.terminate();
-        await document.destroy();
-      }
-      const text = texts.join("\n");
+    const needsOcr = parsed.text.trim().length < 80;
+    if (needsOcr && !allowOcr) {
       return {
-        data: parsePlainText(text),
-        text,
-        meta: { method: "pdf-tesseract-ocr", pages: parsed.numpages, processedPages: texts.length, confidence: confidences.length ? confidences.reduce((sum, value) => sum + value, 0) / confidences.length : 0, ...approvalMeta },
+        data: {},
+        text: parsed.text,
+        meta: { method: "pdf-ocr-deferred", pages: parsed.numpages, processedPages: 0, requiresOcr: true, approvalAnalysisAvailable: false },
       };
     }
-    return {
+
+    if (!needsOcr && !analyzeApprovals) return {
       data: parsePlainText(parsed.text),
       text: parsed.text,
-      meta: { method: "pdf-text", pages: parsed.numpages, info: parsed.info },
+      meta: { method: "pdf-text", pages: parsed.numpages, processedPages: parsed.numpages, info: parsed.info, approvalAnalysisAvailable: false },
+    };
+
+    const document = await pdf(`data:application/pdf;base64,${file.buffer.toString("base64")}`, { scale: 2 });
+    const worker = needsOcr ? await createOcrWorker() : null;
+    const texts = [];
+    const confidences = [];
+    const approvalItems = [];
+    let processedPages = 0;
+    try {
+      if (worker) await worker.setParameters({ tessedit_pageseg_mode: "11", preserve_interword_spaces: "1" });
+      for await (const image of document) {
+        if (processedPages >= 5) break;
+        processedPages += 1;
+        let analysisImage = image;
+        if (worker) {
+          const source = sharp(image).flatten({ background: "#ffffff" });
+          const metadata = await source.metadata();
+          const preparedSource = metadata.width < 1600 ? source.resize({ width: 1600, withoutEnlargement: false }) : source;
+          analysisImage = await preparedSource.greyscale().normalize().sharpen().toBuffer();
+          const result = await worker.recognize(analysisImage);
+          texts.push(result.data.text);
+          confidences.push(result.data.confidence);
+        }
+        if (analyzeApprovals) approvalItems.push(await analyzeApprovalRegions(analysisImage, { continuationPage: processedPages > 1 }));
+      }
+    } finally {
+      if (worker) await worker.terminate();
+      await document.destroy();
+    }
+
+    const text = needsOcr ? texts.join("\n") : parsed.text;
+    const approvalMeta = mergeApprovalMeta(approvalItems);
+    return {
+      data: parsePlainText(text),
+      text,
+      meta: {
+        method: needsOcr ? "pdf-tesseract-ocr" : "pdf-text-visual-approval",
+        pages: parsed.numpages,
+        processedPages,
+        confidence: confidences.length ? confidences.reduce((sum, value) => sum + value, 0) / confidences.length : undefined,
+        info: parsed.info,
+        ...approvalMeta,
+      },
     };
   }
 }

@@ -14,3 +14,13 @@ test("uyuşmayan alanı raporlar", () => {
   const report = compareManualAndExtracted({ student: { studentNo: "100" } }, { student: { studentNo: "200" } });
   assert.equal(report.find((item) => item.path === "student.studentNo").status, "mismatch");
 });
+
+test("belgedeki tarih ve birimli sayıları normalize ederek karşılaştırır", () => {
+  const report = compareManualAndExtracted(
+    { student: { birthDate: "2004-04-15", previousInternshipDays: 0 }, company: { internshipDays: 20 } },
+    { student: { birthDate: "15.04.2004", previousInternshipDays: "0 gün" }, company: { internshipDays: "20 iş günü" } },
+  );
+  assert.equal(report.find((item) => item.path === "student.birthDate").status, "match");
+  assert.equal(report.find((item) => item.path === "student.previousInternshipDays").status, "match");
+  assert.equal(report.find((item) => item.path === "company.internshipDays").status, "match");
+});

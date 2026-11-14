@@ -1,5 +1,5 @@
 import { Application } from "../models/Application.js";
-import { processDocumentUpload } from "../services/documentService.js";
+import { processDocumentUpload, refreshApplicationValidation } from "../services/documentService.js";
 import { inspectGoogleForm, validateGoogleFormUrl } from "../services/googleFormService.js";
 import { calculateInternshipDays } from "../utils/date.js";
 import { AppError } from "../utils/AppError.js";
@@ -16,13 +16,14 @@ async function findOwnedApplication(applicationId, user, includeDocument = false
 }
 
 export async function createApplication(request, response) {
+  const manualData = normalizeManualPhones(request.body.manualData);
   const application = await Application.create({
     student: request.user._id,
-    manualData: normalizeManualPhones(request.body.manualData),
+    manualData,
     stage: request.body.stage || "midterm",
     selectedWeekdays: request.body.selectedWeekdays || [],
-    internshipStart: request.body.internshipStart,
-    internshipEnd: request.body.internshipEnd,
+    internshipStart: request.body.internshipStart || manualData?.company?.startDate,
+    internshipEnd: request.body.internshipEnd || manualData?.company?.endDate,
   });
   await writeAudit(request, "APPLICATION_CREATED", { entityType: "Application", entityId: application._id });
   response.status(201).json({ success: true, data: application });
@@ -42,8 +43,13 @@ export async function updateManualData(request, response) {
   const application = await findOwnedApplication(request.params.id, request.user);
   if (request.user.role !== "admin") application.assertStudentMutable();
   application.manualData = normalizeManualPhones(request.body.manualData);
-  application.status = application.document?.originalName ? "uploaded" : "draft";
-  application.readiness = false;
+  application.internshipStart = application.manualData?.company?.startDate || application.internshipStart;
+  application.internshipEnd = application.manualData?.company?.endDate || application.internshipEnd;
+  if (application.document?.originalName) await refreshApplicationValidation(application);
+  else {
+    application.status = "draft";
+    application.readiness = false;
+  }
   await application.save();
   await writeAudit(request, "MANUAL_DATA_UPDATED", { entityType: "Application", entityId: application._id });
   response.json({ success: true, data: application });
@@ -66,10 +72,17 @@ export async function updateSchedule(request, response) {
   const application = await findOwnedApplication(request.params.id, request.user);
   if (request.user.role !== "admin") application.assertStudentMutable();
   const { internshipStart, internshipEnd, selectedWeekdays } = request.body;
+  const validWeekdays = [...new Set((selectedWeekdays || []).map(Number).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6))];
   application.internshipStart = internshipStart;
   application.internshipEnd = internshipEnd;
-  application.selectedWeekdays = selectedWeekdays || [];
+  application.selectedWeekdays = validWeekdays;
+  application.manualData ||= {};
+  application.manualData.company ||= {};
+  application.manualData.company.startDate = internshipStart;
+  application.manualData.company.endDate = internshipEnd;
+  application.markModified("manualData");
   application.calculatedInternshipDays = calculateInternshipDays(internshipStart, internshipEnd, application.selectedWeekdays);
+  if (application.document?.originalName) await refreshApplicationValidation(application);
   await application.save();
   response.json({ success: true, data: application });
 }

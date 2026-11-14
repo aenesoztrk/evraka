@@ -48,9 +48,23 @@ export function normalizeManualPhones(manualData = {}) {
 
 export function normalizeDate(value) {
   if (!value) return "";
+  const localMatch = String(value).trim().match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+  if (localMatch) return `${localMatch[3]}-${localMatch[2].padStart(2, "0")}-${localMatch[1].padStart(2, "0")}`;
   const date = value instanceof Date ? value : new Date(value);
   if (!Number.isNaN(date.getTime())) return date.toISOString().slice(0, 10);
   return normalizeText(value);
+}
+
+function normalizeNumber(value) {
+  const match = String(value ?? "").replace(",", ".").match(/-?\d+(?:\.\d+)?/);
+  return match ? String(Number(match[0])) : "";
+}
+
+function normalizeBoolean(value) {
+  const normalized = normalizeText(value);
+  if (["e", "evet", "true", "1", "var"].includes(normalized)) return "true";
+  if (["h", "hayir", "false", "0", "yok"].includes(normalized)) return "false";
+  return normalized;
 }
 
 export function getPath(object, path) {
@@ -69,7 +83,12 @@ export function setPath(object, path, value) {
 }
 
 export function toComparable(value, path = "") {
-  if (path.toLowerCase().includes("phone")) return normalizePhone(value);
-  if (path.toLowerCase().includes("date")) return normalizeDate(value);
+  const normalizedPath = path.toLowerCase();
+  if (normalizedPath.includes("phone")) return normalizePhone(value);
+  if (normalizedPath.includes("date")) return normalizeDate(value);
+  if (normalizedPath.includes("academicyear")) return String(value ?? "").match(/20\d{2}\s*[-/]\s*20\d{2}/)?.[0]?.replace(/\s|\//g, (character) => character === "/" ? "-" : "") || normalizeText(value);
+  if (/(days|count|status)$/i.test(path)) return normalizeNumber(value);
+  if (/(abroad|weekendwork|paid|signaturepresent|stamppresent|studentsigned|advisorsigned)$/i.test(path)) return normalizeBoolean(value);
+  if (normalizedPath.includes("identityno")) return String(value ?? "").replace(/\D/g, "");
   return normalizeText(value);
 }

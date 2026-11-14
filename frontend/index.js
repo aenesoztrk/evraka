@@ -2,7 +2,7 @@ const state = {
   role: "student",
   page: "overview",
   selectedFile: null,
-  scheduleDays: ["Pazartesi", "Salı", "Perşembe"],
+  scheduleDays: ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma"],
   session: window.EvraqaApi.getSession(),
   application: null,
   adminApplications: [],
@@ -198,6 +198,11 @@ function phoneControl(path, value, label = "Telefon") {
   return `<label class="phone-field">${label}<div class="phone-input-group"><select class="form-control country-code" name="${path}CountryCode" aria-label="${label} ülke kodu">${countryOptions(countryCode)}</select><input class="form-control" name="${path}" inputmode="tel" placeholder="532 123 45 67" value="${escapeHtml(localNumber)}" required></div></label>`;
 }
 
+function booleanOptions(path, fallback = false) {
+  const value = Boolean(nestedRawValue(path, fallback));
+  return `<option value="false" ${!value ? "selected" : ""}>Hayır</option><option value="true" ${value ? "selected" : ""}>Evet</option>`;
+}
+
 const manualFormTemplate = () => `
   <div class="dashboard-page-head"><div><h2>Ek-16 bilgi formu</h2><p>Belgedeki bilgilerle karşılaştırılacak alanları eksiksiz gir. Bilgilerin başvuru kaydında güvenle saklanır.</p></div><div class="page-head-actions"><span class="api-state">Veri kaydı aktif</span><button class="dash-primary" form="manual-form" type="submit">Bilgileri kaydet</button></div></div>
   <form id="manual-form" class="manual-form">
@@ -217,7 +222,7 @@ const manualFormTemplate = () => `
     </div></section>
     <section class="manual-section"><div class="manual-section-head"><i>02</i><div><h3>Staj yapılan yer</h3><p>Kurum, takvim ve çalışma bilgileri</p></div></div><div class="manual-fields">
       <label class="span-2">Kurum / işletme adı<input class="form-control" name="company.name" value="${nestedValue("company.name")}" required></label>
-      <label>Yurtdışı stajı mı?<select class="form-control" name="company.abroad"><option value="false">Hayır</option><option value="true">Evet</option></select></label>
+      <label>Yurtdışı stajı mı?<select class="form-control" name="company.abroad">${booleanOptions("company.abroad")}</select></label>
       <label>Hizmet alanı<input class="form-control" name="company.serviceArea" value="${nestedValue("company.serviceArea")}" required></label>
       <label>Başlangıç tarihi<input class="form-control" name="company.startDate" type="date" value="${nestedValue("company.startDate")}" required></label>
       <label>Bitiş tarihi<input class="form-control" name="company.endDate" type="date" value="${nestedValue("company.endDate")}" required></label>
@@ -229,8 +234,8 @@ const manualFormTemplate = () => `
       <label>Çalışan sayısı<input class="form-control" name="company.employeeCount" type="number" min="1" value="${nestedValue("company.employeeCount")}" required></label>
       <label>Mühendis sayısı<input class="form-control" name="company.engineerCount" type="number" min="1" value="${nestedValue("company.engineerCount")}" required></label>
       <label data-engineer-department>Mühendis mezuniyet bölümü<small>Mühendis sayısı 5’in altındaysa zorunludur.</small><input class="form-control" name="company.engineerDepartment" value="${nestedValue("company.engineerDepartment")}"></label>
-      <label>Hafta sonu çalışılıyor mu?<select class="form-control" name="company.weekendWork"><option value="false">Hayır</option><option value="true">Evet</option></select></label>
-      <label>Ücret alıyor mu?<select class="form-control" name="company.paid"><option value="false">Hayır</option><option value="true">Evet</option></select></label>
+      <label>Hafta sonu çalışılıyor mu?<select class="form-control" name="company.weekendWork">${booleanOptions("company.weekendWork")}</select></label>
+      <label>Ücret alıyor mu?<select class="form-control" name="company.paid">${booleanOptions("company.paid")}</select></label>
       <label class="span-3">Kurum adresi<textarea class="form-control" name="company.address" rows="3" required>${nestedValue("company.address")}</textarea></label>
     </div></section>
     <section class="manual-section"><div class="manual-section-head"><i>03</i><div><h3>İşveren veya yetkili</h3><p>Yetkili kişi ve onay alanları</p></div></div><div class="manual-fields">
@@ -239,35 +244,39 @@ const manualFormTemplate = () => `
       <label>E-posta<input class="form-control" name="employer.email" type="email" value="${nestedValue("employer.email")}" required></label>
       ${phoneControl("employer.phone", nestedRawValue("employer.phone"))}
       <div class="span-2 switch-row"><label><input type="checkbox" name="employer.signaturePresent" ${nestedValue("employer.signaturePresent") === "true" ? "checked" : ""}> İşveren imzası var</label><label><input type="checkbox" name="employer.stampPresent" ${nestedValue("employer.stampPresent") === "true" ? "checked" : ""}> İşveren kaşesi var</label></div>
-      <div class="span-3 switch-row"><label><input type="checkbox" name="approvals.studentSigned"> Öğrenci onay kısmı dolu</label><label><input type="checkbox" name="approvals.advisorSigned"> Danışman onay kısmı dolu</label></div>
+      <div class="span-3 switch-row"><label><input type="checkbox" name="approvals.studentSigned" ${nestedValue("approvals.studentSigned") === "true" ? "checked" : ""}> Öğrenci onay kısmı dolu</label><label><input type="checkbox" name="approvals.advisorSigned" ${nestedValue("approvals.advisorSigned") === "true" ? "checked" : ""}> Danışman onay kısmı dolu</label></div>
     </div></section>
   </form>`;
 
 const reportTemplate = () => {
   const application = state.application;
+  const isFinal = application?.stage === "final";
   const validation = application?.validationReport || [];
   const comparison = application?.comparisonReport || [];
   const combined = [
     ...validation.map(item => ({ title: item.title, message: item.message, status: item.status })),
-    ...comparison.filter(item => item.status !== "match" && item.status !== "missing-both").map(item => ({ title: `${item.label} karşılaştırması`, message: `Form: ${item.manual || "boş"} · Belge: ${item.extracted || "boş"}`, status: item.status === "mismatch" ? "error" : "warning" })),
+    ...comparison.filter(item => item.status !== "match" && item.status !== "missing-both").map(item => ({ title: `${item.label} karşılaştırması`, message: `Form: ${item.manual || "boş"} · Belge: ${item.extracted || "boş"}`, status: isFinal && item.status === "mismatch" ? "error" : "warning" })),
   ];
-  const success = validation.filter(item => item.status === "success").length + comparison.filter(item => item.status === "match").length;
+  const success = validation.filter(item => item.status === "success").length + (isFinal ? comparison.filter(item => item.status === "match").length : 0);
   const warning = combined.filter(item => item.status === "warning").length;
   const error = combined.filter(item => item.status === "error").length;
-  const total = Math.max(1, validation.length + comparison.filter(item => item.status !== "missing-both").length);
+  const total = Math.max(1, validation.length + (isFinal ? comparison.filter(item => item.status !== "missing-both").length : 0));
   const score = application ? Math.round((success / total) * 100) : 0;
   const rows = combined.length ? combined : [{ title: "Henüz analiz yapılmadı", message: "Önce bilgi formunu kaydet ve Ek-16 belgesini yükle.", status: "warning" }];
   return `
   <div class="dashboard-page-head"><div><h2>Kontrol raporu</h2><p>${escapeHtml(application?.document?.originalName || "Belge yüklenmedi")} · ${application?.stage === "final" ? "Final doğrulamaları" : "Vize alan karşılaştırması"}</p></div><div class="page-head-actions"><button class="dash-secondary" data-nav="manual">Bilgileri düzenle</button><button class="dash-primary" data-open-upload>⇧ ${application?.document ? "Yeniden yükle" : "Belge yükle"}</button></div></div>
-  <article class="panel-card"><div class="validation-summary"><div class="score-large"><span><strong>${score}</strong><small>%</small></span></div><div><div class="panel-card-head"><div><h3>Belge hazırlık skoru</h3><p>${application?.readiness ? "Belge teslime hazır." : "Eksik ve uyuşmayan alanları düzelttikten sonra yeniden analiz et."}</p></div></div><div class="summary-counts"><div class="summary-count ok"><b>${success}</b><span>Başarılı</span></div><div class="summary-count warn"><b>${warning}</b><span>Uyarı</span></div><div class="summary-count error"><b>${error}</b><span>Hata</span></div></div></div></div></article>
-  <article class="panel-card" style="margin-top:18px"><div class="panel-card-head"><div><h3>Kontrol sonuçları</h3><p>Manuel bilgiler, belge alanları ve doğrulama kuralları</p></div><span class="status-badge ${application?.readiness ? "complete" : "error"}">${application?.readiness ? "Teslime hazır" : "Düzeltme gerekli"}</span></div><div class="results-list">${rows.map(item => { const css = item.status === "success" ? "ok" : item.status === "warning" ? "warn" : "error"; return `<div class="result-row ${css}"><i>${css === "ok" ? "✓" : "!"}</i><div><b>${escapeHtml(item.title)}</b><span>${escapeHtml(item.message)}</span></div><em>${css === "ok" ? "Başarılı" : css === "warn" ? "Kontrol et" : "Düzelt"}</em></div>`; }).join("")}</div></article>`;
+  <article class="panel-card"><div class="validation-summary"><div class="score-large"><span><strong>${score}</strong><small>%</small></span></div><div><div class="panel-card-head"><div><h3>${isFinal ? "Belge hazırlık skoru" : "Vize dosya uygunluğu"}</h3><p>${isFinal ? (application?.readiness ? "Belge teslime hazır." : "Eksik ve uyuşmayan alanları düzelttikten sonra yeniden analiz et.") : "Vizede dosya kontrolleri sonucu belirler; alan farkları bilgi amaçlı raporlanır."}</p></div></div><div class="summary-counts"><div class="summary-count ok"><b>${success}</b><span>Başarılı</span></div><div class="summary-count warn"><b>${warning}</b><span>Uyarı</span></div><div class="summary-count error"><b>${error}</b><span>Hata</span></div></div></div></div></article>
+  <article class="panel-card" style="margin-top:18px"><div class="panel-card-head"><div><h3>Kontrol sonuçları</h3><p>Manuel bilgiler, belge alanları ve doğrulama kuralları</p></div><span class="status-badge ${application?.readiness ? "complete" : "error"}">${application?.readiness ? (isFinal ? "Teslime hazır" : "Vize dosyası uygun") : "Düzeltme gerekli"}</span></div><div class="results-list">${rows.map(item => { const css = item.status === "success" ? "ok" : item.status === "warning" ? "warn" : "error"; return `<div class="result-row ${css}"><i>${css === "ok" ? "✓" : "!"}</i><div><b>${escapeHtml(item.title)}</b><span>${escapeHtml(item.message)}</span></div><em>${css === "ok" ? "Başarılı" : css === "warn" ? "Bilgi" : "Düzelt"}</em></div>`; }).join("")}</div></article>`;
 };
 
 const scheduleTemplate = () => {
   const application = state.application;
-  const selected = application?.selectedWeekdays?.length ? application.selectedWeekdays : state.scheduleDays.map(day => ({ Pazartesi: 1, Salı: 2, Çarşamba: 3, Perşembe: 4, Cuma: 5 })[day]);
-  const start = application?.internshipStart ? new Date(application.internshipStart).toISOString().slice(0, 10) : "";
-  const end = application?.internshipEnd ? new Date(application.internshipEnd).toISOString().slice(0, 10) : "";
+  const dayNumberMap = { Pazar: 0, Pazartesi: 1, Salı: 2, Çarşamba: 3, Perşembe: 4, Cuma: 5, Cumartesi: 6 };
+  const selected = application?.selectedWeekdays?.length ? application.selectedWeekdays : state.scheduleDays.map(day => dayNumberMap[day]);
+  const startValue = application?.internshipStart || application?.manualData?.company?.startDate;
+  const endValue = application?.internshipEnd || application?.manualData?.company?.endDate;
+  const start = startValue ? new Date(startValue).toISOString().slice(0, 10) : "";
+  const end = endValue ? new Date(endValue).toISOString().slice(0, 10) : "";
   const dateRule = application?.validationReport?.find(item => item.code === "ACADEMIC_DATE");
   const internshipRule = application?.validationReport?.find(item => item.code === "INTERNSHIP_DAYS");
   return `
@@ -276,7 +285,7 @@ const scheduleTemplate = () => {
     <article class="panel-card">
       <div class="panel-card-head"><div><h3>Tarih aralığı</h3><p>Öğretim yılı: 2026–2027 Güz</p></div></div>
       <div class="schedule-grid"><div class="form-group"><label for="start-date">Başlangıç tarihi</label><input class="form-control" id="start-date" type="date" value="${start}"></div><div class="form-group"><label for="end-date">Bitiş tarihi</label><input class="form-control" id="end-date" type="date" value="${end}"></div></div>
-      <div class="form-group" style="margin-top:18px"><label>Haftalık staj günleri</label><div class="day-selector">${[[1,"Pazartesi"],[2,"Salı"],[3,"Çarşamba"],[4,"Perşembe"],[5,"Cuma"]].map(([number,day])=>`<button class="${selected.includes(number)?"selected":""}" data-day="${day}">${day.slice(0,3)}</button>`).join("")}</div></div>
+      <div class="form-group" style="margin-top:18px"><label>Haftalık staj günleri</label><div class="day-selector">${[[1,"Pazartesi"],[2,"Salı"],[3,"Çarşamba"],[4,"Perşembe"],[5,"Cuma"],[6,"Cumartesi"],[0,"Pazar"]].map(([number,day])=>`<button class="${selected.includes(number)?"selected":""}" data-day="${day}">${day.slice(0,3)}</button>`).join("")}</div></div>
       <div class="calculation-box"><div><b>${application?.calculatedInternshipDays ?? 0}</b><span>Hesaplanan staj günü</span></div><div><b>${selected.length}</b><span>Haftalık gün</span></div><div><b>${application?.manualData?.company?.internshipDays ?? "—"}</b><span>Belgede beyan edilen</span></div></div>
     </article>
     <article class="panel-card">
@@ -532,7 +541,7 @@ async function enterDashboard() {
     try {
       const response = await window.EvraqaApi.myApplications();
       state.application = response.data[0] || null;
-      const dayNames = { 1: "Pazartesi", 2: "Salı", 3: "Çarşamba", 4: "Perşembe", 5: "Cuma" };
+      const dayNames = { 0: "Pazar", 1: "Pazartesi", 2: "Salı", 3: "Çarşamba", 4: "Perşembe", 5: "Cuma", 6: "Cumartesi" };
       if (state.application?.selectedWeekdays?.length) state.scheduleDays = state.application.selectedWeekdays.map(day => dayNames[day]).filter(Boolean);
     } catch (error) {
       showToast(error.message, "!");
@@ -561,6 +570,7 @@ function openUpload() {
   }
   state.selectedFile = null;
   resetUploadModal();
+  document.querySelector("#upload-stage").value = state.application?.stage || "midterm";
   uploadModal.hidden = false;
   document.body.style.overflow = "hidden";
 }
@@ -600,7 +610,7 @@ function handleFile(file) {
 
 async function analyzeSelectedFile() {
   if (!state.selectedFile) return;
-  const stage = document.querySelector("#upload-stage")?.value || "final";
+  const stage = document.querySelector("#upload-stage")?.value || "midterm";
   const modal = uploadModal.querySelector(".upload-action-modal");
   modal.innerHTML = `<div class="analysis-progress"><div class="progress-spinner"></div><span class="modal-kicker">BELGE ANALİZİ</span><h2>Kontroller çalıştırılıyor...</h2><p>${escapeHtml(state.selectedFile.name)} okunuyor; alanlar ve kurallar karşılaştırılıyor.</p><div class="progress-bar-wide"><span></span></div><p style="margin-top:12px">${stage === "final" ? "OCR · kimlik · tarih · imza / kaşe kontrolleri" : "Dosya biçimi · alan okuma · manuel bilgi karşılaştırması"}</p></div>`;
   try {
@@ -609,7 +619,8 @@ async function analyzeSelectedFile() {
     closeUpload();
     resetUploadModal();
     renderDashboardPage("report");
-    showToast(state.application.readiness ? "Analiz tamamlandı: belge teslime hazır." : "Analiz tamamlandı: düzeltilmesi gereken alanlar var.", state.application.readiness ? "✓" : "!");
+    const successMessage = stage === "final" ? "Analiz tamamlandı: belge teslime hazır." : "Vize dosya kontrolleri başarıyla tamamlandı.";
+    showToast(state.application.readiness ? successMessage : "Analiz tamamlandı: düzeltilmesi gereken alanlar var.", state.application.readiness ? "✓" : "!");
   } catch (error) {
     resetUploadModal();
     showToast(error.message, "!");
@@ -650,7 +661,7 @@ function formDataToNested(formData) {
 
 async function saveSchedule() {
   if (!state.application) return showToast("Önce Ek-16 bilgi formunu kaydet.", "!");
-  const dayNumbers = { Pazartesi: 1, Salı: 2, Çarşamba: 3, Perşembe: 4, Cuma: 5 };
+  const dayNumbers = { Pazar: 0, Pazartesi: 1, Salı: 2, Çarşamba: 3, Perşembe: 4, Cuma: 5, Cumartesi: 6 };
   try {
     const response = await window.EvraqaApi.updateSchedule(state.application._id, {
       internshipStart: document.querySelector("#start-date").value,

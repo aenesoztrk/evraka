@@ -7,6 +7,7 @@ import { submitGoogleForm } from "../services/googleFormService.js";
 import { AppError } from "../utils/AppError.js";
 import { writeAudit } from "../utils/audit.js";
 import { normalizeManualPhones } from "../utils/normalization.js";
+import { refreshApplicationValidation } from "../services/documentService.js";
 
 export async function dashboardStats(_request, response) {
   const [total, completed, reviewing, error, students, datasets] = await Promise.all([
@@ -117,8 +118,9 @@ export async function uploadTestDataset(request, response) {
 export async function completeApplication(request, response) {
   const application = await Application.findById(request.params.id);
   if (!application) throw new AppError("Başvuru bulunamadı.", 404);
-  if (!application.readiness && !request.body.force) throw new AppError("Başvuru doğrulama kontrollerini geçmeden tamamlanamaz.", 409);
-  if ((!application.googleForm?.url || !application.googleForm?.entryMap?.size) && !request.body.force) throw new AppError("Başvuru tamamlanmadan önce Google Form bağlantısı ve alan eşlemesi kaydedilmelidir.", 409);
+  if (application.stage !== "final" && !request.body?.force) throw new AppError("Başvuru tamamlanmadan önce final OCR ve doğrulama aşamasından geçirilmelidir.", 409);
+  if (!application.readiness && !request.body?.force) throw new AppError("Başvuru doğrulama kontrollerini geçmeden tamamlanamaz.", 409);
+  if ((!application.googleForm?.url || !application.googleForm?.entryMap?.size) && !request.body?.force) throw new AppError("Başvuru tamamlanmadan önce Google Form bağlantısı ve alan eşlemesi kaydedilmelidir.", 409);
   if (application.googleForm?.url && application.googleForm?.entryMap?.size) {
     try {
       const result = await submitGoogleForm(application.googleForm, application);
@@ -141,7 +143,12 @@ export async function completeApplication(request, response) {
 export async function adminUpdateApplication(request, response) {
   const application = await Application.findById(request.params.id);
   if (!application) throw new AppError("Başvuru bulunamadı.", 404);
-  if (request.body.manualData) application.manualData = normalizeManualPhones(request.body.manualData);
+  if (request.body.manualData) {
+    application.manualData = normalizeManualPhones(request.body.manualData);
+    application.internshipStart = application.manualData?.company?.startDate || application.internshipStart;
+    application.internshipEnd = application.manualData?.company?.endDate || application.internshipEnd;
+    if (application.document?.originalName) await refreshApplicationValidation(application);
+  }
   if (request.body.status) application.status = request.body.status;
   await application.save();
   await writeAudit(request, "ADMIN_APPLICATION_UPDATED", { entityType: "Application", entityId: application._id });
