@@ -1,5 +1,7 @@
 import { authenticate, registerStudent, signToken } from "../services/authService.js";
 import { writeAudit } from "../utils/audit.js";
+import { AppError } from "../utils/AppError.js";
+import { canonicalizePhone } from "../utils/normalization.js";
 
 export async function register(request, response) {
   const result = await registerStudent(request.body);
@@ -27,4 +29,13 @@ export async function logout(request, response) {
   await request.user.save();
   await writeAudit(request, "AUTH_LOGOUT", { entityType: "User", entityId: request.user._id });
   response.json({ success: true, message: "Oturum kapatıldı." });
+}
+
+export async function updatePhone(request, response) {
+  const phone = canonicalizePhone(request.body.phone, request.body.phoneCountryCode);
+  if (!/^\+\d{8,15}$/.test(phone)) throw new AppError("Geçerli bir ülke kodu ve telefon numarası girin.", 422);
+  request.user.phone = phone;
+  await request.user.save();
+  await writeAudit(request, "PROFILE_PHONE_UPDATED", { entityType: "User", entityId: request.user._id });
+  response.json({ success: true, data: request.user });
 }

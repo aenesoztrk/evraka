@@ -4,6 +4,7 @@ import { inspectGoogleForm, validateGoogleFormUrl } from "../services/googleForm
 import { calculateInternshipDays } from "../utils/date.js";
 import { AppError } from "../utils/AppError.js";
 import { writeAudit } from "../utils/audit.js";
+import { normalizeManualPhones } from "../utils/normalization.js";
 
 async function findOwnedApplication(applicationId, user, includeDocument = false) {
   const query = Application.findById(applicationId);
@@ -17,7 +18,7 @@ async function findOwnedApplication(applicationId, user, includeDocument = false
 export async function createApplication(request, response) {
   const application = await Application.create({
     student: request.user._id,
-    manualData: request.body.manualData || {},
+    manualData: normalizeManualPhones(request.body.manualData),
     stage: request.body.stage || "midterm",
     selectedWeekdays: request.body.selectedWeekdays || [],
     internshipStart: request.body.internshipStart,
@@ -40,7 +41,7 @@ export async function getApplication(request, response) {
 export async function updateManualData(request, response) {
   const application = await findOwnedApplication(request.params.id, request.user);
   if (request.user.role !== "admin") application.assertStudentMutable();
-  application.manualData = request.body.manualData || {};
+  application.manualData = normalizeManualPhones(request.body.manualData);
   application.status = application.document?.originalName ? "uploaded" : "draft";
   application.readiness = false;
   await application.save();

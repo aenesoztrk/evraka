@@ -48,6 +48,7 @@
     login: (identifier, password) => request("/auth/login", json("POST", { identifier, password })),
     register: (data) => request("/auth/register", json("POST", data)),
     me: () => request("/auth/me"),
+    updatePhone: (data) => request("/auth/profile/phone", json("PATCH", data)),
     logout: () => request("/auth/logout", { method: "POST" }),
     createApplication: (data) => request("/applications", json("POST", data)),
     myApplications: () => request("/applications/mine"),

@@ -66,7 +66,7 @@ export class ContactRule extends ValidationRule {
       const email = String(getPath(data, `${path}.email`) ?? "");
       const phone = normalizePhone(getPath(data, `${path}.phone`));
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push(`${label} e-posta biçimi geçersiz.`);
-      if (!/^90\d{10}$/.test(phone)) errors.push(`${label} telefonu +90 xxx xxx xx xx biçiminde olmalıdır.`);
+      if (!/^\d{8,15}$/.test(phone)) errors.push(`${label} telefonu ülke koduyla birlikte geçerli biçimde olmalıdır.`);
     }
     return errors.length ? this.result("error", errors.join(" "), "student.emailPhone") : this.result("success", "E-posta ve telefon biçimleri uygun.");
   }

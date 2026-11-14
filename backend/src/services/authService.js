@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
 import { User } from "../models/User.js";
 import { AppError } from "../utils/AppError.js";
+import { canonicalizePhone } from "../utils/normalization.js";
 
 const PASSWORD_PATTERN = /^(?=.*[a-zçğıöşü])(?=.*[A-ZÇĞİÖŞÜ])(?=.*\d).{8,}$/;
 
@@ -27,6 +28,8 @@ export async function registerStudent(payload) {
   if (!payload.name || !payload.email || !payload.studentNo || !payload.identityNo) {
     throw new AppError("Ad soyad, e-posta, öğrenci numarası ve kimlik numarası zorunludur.", 422);
   }
+  const phone = canonicalizePhone(payload.phone, payload.phoneCountryCode);
+  if (!/^\+\d{8,15}$/.test(phone)) throw new AppError("Geçerli bir ülke kodu ve telefon numarası girin.", 422);
   const passwordHash = await bcrypt.hash(payload.password, 12);
   const user = await User.create({
     role: "student",
@@ -41,7 +44,7 @@ export async function registerStudent(payload) {
     department: payload.department,
     academicYear: payload.academicYear,
     previousInternshipDays: payload.previousInternshipDays || 0,
-    phone: payload.phone,
+    phone,
     healthStatus: payload.healthStatus,
   });
   return { user, token: signToken(user) };

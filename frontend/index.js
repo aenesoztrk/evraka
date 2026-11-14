@@ -168,8 +168,34 @@ function escapeHtml(value = "") {
 }
 
 function nestedValue(path, fallback = "") {
-  const value = path.split(".").reduce((current, key) => current?.[key], state.application?.manualData || {});
+  const value = nestedRawValue(path, fallback);
   return escapeHtml(value ?? fallback);
+}
+
+function nestedRawValue(path, fallback = "") {
+  return path.split(".").reduce((current, key) => current?.[key], state.application?.manualData || {}) ?? fallback;
+}
+
+const phoneCountries = [
+  ["90", "TR +90"], ["49", "DE +49"], ["44", "UK +44"], ["1", "US/CA +1"],
+  ["33", "FR +33"], ["31", "NL +31"], ["32", "BE +32"],
+];
+
+function splitPhone(value = "", fallbackCode = "90") {
+  const digits = String(value || "").replace(/\D/g, "").replace(/^00/, "");
+  const matchedCode = [...phoneCountries].sort((a, b) => b[0].length - a[0].length).find(([code]) => digits.startsWith(code));
+  const countryCode = matchedCode?.[0] || fallbackCode;
+  const localNumber = matchedCode ? digits.slice(countryCode.length) : digits.replace(/^0+/, "");
+  return { countryCode, localNumber };
+}
+
+function countryOptions(selectedCode = "90") {
+  return phoneCountries.map(([code, label]) => `<option value="${code}" ${code === selectedCode ? "selected" : ""}>${label}</option>`).join("");
+}
+
+function phoneControl(path, value, label = "Telefon") {
+  const { countryCode, localNumber } = splitPhone(value);
+  return `<label class="phone-field">${label}<div class="phone-input-group"><select class="form-control country-code" name="${path}CountryCode" aria-label="${label} ülke kodu">${countryOptions(countryCode)}</select><input class="form-control" name="${path}" inputmode="tel" placeholder="532 123 45 67" value="${escapeHtml(localNumber)}" required></div></label>`;
 }
 
 const manualFormTemplate = () => `
@@ -186,7 +212,7 @@ const manualFormTemplate = () => `
       <label>Öğretim yılı<input class="form-control" name="student.academicYear" placeholder="2026-2027 Güz" value="${nestedValue("student.academicYear", "2026-2027 Güz")}" required></label>
       <label>Sağlık yardım statüsü<select class="form-control" name="student.healthStatus" required>${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${String(n)===nestedValue("student.healthStatus")?"selected":""}>${n}. seçenek</option>`).join("")}</select></label>
       <label>E-posta<input class="form-control" name="student.email" type="email" value="${nestedValue("student.email", state.session?.user?.email)}" required></label>
-      <label>Telefon<input class="form-control" name="student.phone" placeholder="+90 5xx xxx xx xx" value="${nestedValue("student.phone", state.session?.user?.phone)}" required></label>
+      ${phoneControl("student.phone", nestedRawValue("student.phone", state.session?.user?.phone))}
       <label class="span-3">İkametgâh adresi<textarea class="form-control" name="student.address" rows="3" required>${nestedValue("student.address")}</textarea></label>
     </div></section>
     <section class="manual-section"><div class="manual-section-head"><i>02</i><div><h3>Staj yapılan yer</h3><p>Kurum, takvim ve çalışma bilgileri</p></div></div><div class="manual-fields">
@@ -195,7 +221,7 @@ const manualFormTemplate = () => `
       <label>Hizmet alanı<input class="form-control" name="company.serviceArea" value="${nestedValue("company.serviceArea")}" required></label>
       <label>Başlangıç tarihi<input class="form-control" name="company.startDate" type="date" value="${nestedValue("company.startDate")}" required></label>
       <label>Bitiş tarihi<input class="form-control" name="company.endDate" type="date" value="${nestedValue("company.endDate")}" required></label>
-      <label>Telefon<input class="form-control" name="company.phone" value="${nestedValue("company.phone")}" required></label>
+      ${phoneControl("company.phone", nestedRawValue("company.phone"))}
       <label>Faks<input class="form-control" name="company.fax" value="${nestedValue("company.fax")}"></label>
       <label>Staj gün sayısı<input class="form-control" name="company.internshipDays" type="number" min="1" value="${nestedValue("company.internshipDays", 30)}" required></label>
       <label>E-posta<input class="form-control" name="company.email" type="email" value="${nestedValue("company.email")}" required></label>
@@ -211,7 +237,7 @@ const manualFormTemplate = () => `
       <label>Ad soyad<input class="form-control" name="employer.name" value="${nestedValue("employer.name")}" required></label>
       <label>Görev / unvan<input class="form-control" name="employer.title" value="${nestedValue("employer.title")}" required></label>
       <label>E-posta<input class="form-control" name="employer.email" type="email" value="${nestedValue("employer.email")}" required></label>
-      <label>Telefon<input class="form-control" name="employer.phone" value="${nestedValue("employer.phone")}" required></label>
+      ${phoneControl("employer.phone", nestedRawValue("employer.phone"))}
       <div class="span-2 switch-row"><label><input type="checkbox" name="employer.signaturePresent" ${nestedValue("employer.signaturePresent") === "true" ? "checked" : ""}> İşveren imzası var</label><label><input type="checkbox" name="employer.stampPresent" ${nestedValue("employer.stampPresent") === "true" ? "checked" : ""}> İşveren kaşesi var</label></div>
       <div class="span-3 switch-row"><label><input type="checkbox" name="approvals.studentSigned"> Öğrenci onay kısmı dolu</label><label><input type="checkbox" name="approvals.advisorSigned"> Danışman onay kısmı dolu</label></div>
     </div></section>
@@ -233,7 +259,7 @@ const reportTemplate = () => {
   const rows = combined.length ? combined : [{ title: "Henüz analiz yapılmadı", message: "Önce bilgi formunu kaydet ve Ek-16 belgesini yükle.", status: "warning" }];
   return `
   <div class="dashboard-page-head"><div><h2>Kontrol raporu</h2><p>${escapeHtml(application?.document?.originalName || "Belge yüklenmedi")} · ${application?.stage === "final" ? "Final doğrulamaları" : "Vize alan karşılaştırması"}</p></div><div class="page-head-actions"><button class="dash-secondary" data-nav="manual">Bilgileri düzenle</button><button class="dash-primary" data-open-upload>⇧ ${application?.document ? "Yeniden yükle" : "Belge yükle"}</button></div></div>
-  <article class="panel-card"><div class="validation-summary"><div class="score-large"><strong>${score}</strong><small>%</small></div><div><div class="panel-card-head"><div><h3>Belge hazırlık skoru</h3><p>${application?.readiness ? "Belge teslime hazır." : "Eksik ve uyuşmayan alanları düzelttikten sonra yeniden analiz et."}</p></div></div><div class="summary-counts"><div class="summary-count ok"><b>${success}</b><span>Başarılı</span></div><div class="summary-count warn"><b>${warning}</b><span>Uyarı</span></div><div class="summary-count error"><b>${error}</b><span>Hata</span></div></div></div></div></article>
+  <article class="panel-card"><div class="validation-summary"><div class="score-large"><span><strong>${score}</strong><small>%</small></span></div><div><div class="panel-card-head"><div><h3>Belge hazırlık skoru</h3><p>${application?.readiness ? "Belge teslime hazır." : "Eksik ve uyuşmayan alanları düzelttikten sonra yeniden analiz et."}</p></div></div><div class="summary-counts"><div class="summary-count ok"><b>${success}</b><span>Başarılı</span></div><div class="summary-count warn"><b>${warning}</b><span>Uyarı</span></div><div class="summary-count error"><b>${error}</b><span>Hata</span></div></div></div></div></article>
   <article class="panel-card" style="margin-top:18px"><div class="panel-card-head"><div><h3>Kontrol sonuçları</h3><p>Manuel bilgiler, belge alanları ve doğrulama kuralları</p></div><span class="status-badge ${application?.readiness ? "complete" : "error"}">${application?.readiness ? "Teslime hazır" : "Düzeltme gerekli"}</span></div><div class="results-list">${rows.map(item => { const css = item.status === "success" ? "ok" : item.status === "warning" ? "warn" : "error"; return `<div class="result-row ${css}"><i>${css === "ok" ? "✓" : "!"}</i><div><b>${escapeHtml(item.title)}</b><span>${escapeHtml(item.message)}</span></div><em>${css === "ok" ? "Başarılı" : css === "warn" ? "Kontrol et" : "Düzelt"}</em></div>`; }).join("")}</div></article>`;
 };
 
@@ -295,8 +321,10 @@ const profileTemplate = (role = state.role) => {
   ];
   const adminFields = [["Yetki rolü","ROLE_ADMIN"],["E-posta",user.email || "—"],["Hesap oluşturma",user.createdAt ? new Date(user.createdAt).toLocaleDateString("tr-TR") : "—"],["Hesap durumu",user.isActive === false ? "Pasif" : "Aktif"]];
   const fields = role === "student" ? studentFields : adminFields;
+  const phone = splitPhone(user.phone);
+  const phoneEditor = role === "student" ? `<form id="profile-phone-form" class="profile-phone-editor"><div><strong>Telefon numarasını güncelle</strong><p>Numara ülke koduyla birlikte tek biçimde kaydedilir.</p></div><div class="phone-input-group"><select class="form-control country-code" name="phoneCountryCode" aria-label="Ülke kodu">${countryOptions(phone.countryCode)}</select><input class="form-control" name="phone" inputmode="tel" value="${escapeHtml(phone.localNumber)}" placeholder="532 123 45 67" required><button class="dash-primary" type="submit">Güncelle</button></div></form>` : "";
   return `<div class="dashboard-page-head"><div><h2>${role === "student" ? "Profil bilgilerim" : "Yönetici profili"}</h2><p>${role === "student" ? "Hesap oluştururken kaydettiğin bilgiler." : "Yönetici hesap ve yetki bilgilerinin özeti."}</p></div></div>
-  <div class="profile-grid"><article class="panel-card profile-card"><div class="profile-big-avatar">${profile.initials}</div><h3>${profile.name}</h3><p>${profile.number}</p><span class="status-badge complete">Aktif hesap</span></article><article class="panel-card"><div class="panel-card-head"><div><h3>Kayıtlı bilgiler</h3><p>Hesap oluşturma: ${user.createdAt ? new Date(user.createdAt).toLocaleDateString("tr-TR") : "—"}</p></div></div><div class="profile-data">${fields.map(([label,value])=>`<div class="data-field"><span>${label}</span><b>${value}</b></div>`).join("")}</div></article></div>`;
+  <div class="profile-grid"><article class="panel-card profile-card"><div class="profile-big-avatar">${profile.initials}</div><h3>${profile.name}</h3><p>${profile.number}</p><span class="status-badge complete">Aktif hesap</span></article><article class="panel-card"><div class="panel-card-head"><div><h3>Kayıtlı bilgiler</h3><p>Hesap oluşturma: ${user.createdAt ? new Date(user.createdAt).toLocaleDateString("tr-TR") : "—"}</p></div></div><div class="profile-data">${fields.map(([label,value])=>`<div class="data-field"><span>${label}</span><b>${value}</b></div>`).join("")}</div>${phoneEditor}</article></div>`;
 };
 
 const adminOverviewTemplate = () => `
@@ -812,6 +840,22 @@ document.addEventListener("input", event => {
 });
 
 document.addEventListener("submit", async event => {
+  if (event.target.matches("#profile-phone-form")) {
+    event.preventDefault();
+    const button = event.target.querySelector("button[type='submit']");
+    button.disabled = true;
+    try {
+      const payload = Object.fromEntries(new FormData(event.target));
+      const response = await window.EvraqaApi.updatePhone(payload);
+      state.session.user = response.data;
+      window.EvraqaApi.setSession(state.session);
+      syncSessionProfile(response.data);
+      showToast("Telefon numarası güncellendi.");
+      renderDashboardPage("profile");
+    } catch (error) { showToast(error.message, "!"); }
+    finally { button.disabled = false; }
+    return;
+  }
   if (!event.target.matches("#manual-form")) return;
   event.preventDefault();
   const manualData = formDataToNested(new FormData(event.target));

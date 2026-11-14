@@ -150,7 +150,8 @@
               <div class="upload-arrow">↑</div>
             </div>
             <h3>Ek-16’yı yükle</h3>
-            <p>PDF, Word, JPEG veya PNG formatındaki belgeni sürükleyip bırak.</p>
+            <p>Belgeni desteklenen formatlardan biriyle yükle; dosya türü ve boyutu ilk adımda doğrulansın.</p>
+            <ul class="step-points"><li>PDF, DOC, DOCX</li><li>JPEG ve PNG</li></ul>
             <span class="step-tag">Maks. 10 MB</span>
           </article>
           <article class="step-card feature-step reveal delay-1">
@@ -161,18 +162,29 @@
             </div>
             <h3>Sistem kontrol etsin</h3>
             <p>Kimlik, iletişim, tarih, staj günü ve onay alanları tanımlı doğrulama kurallarıyla değerlendirilsin.</p>
+            <ul class="step-points"><li>Manuel veri karşılaştırması</li><li>OCR ve kural motoru</li></ul>
             <span class="step-tag">Çok katmanlı kontrol</span>
           </article>
           <article class="step-card reveal delay-2">
             <div class="step-number">03</div>
             <div class="step-illustration report-illustration" aria-hidden="true">
-              <div class="score-ring">93<small>%</small></div>
+              <div class="score-ring"><span>93<small>%</small></span></div>
               <div class="report-lines"><span></span><span></span><span></span></div>
             </div>
             <h3>Raporu incele</h3>
             <p>Eksik veya hatalı alanları öncelik sırasıyla gör, düzelt ve yeniden yükle.</p>
+            <ul class="step-points"><li>Alan bazlı açıklamalar</li><li>Hazırlık skoru</li></ul>
             <span class="step-tag">Anlık sonuç</span>
           </article>
+        </div>
+        <div class="workflow-ledger reveal" aria-label="Belge kontrol akışı">
+          <article><span>GİRDİ</span><strong>Kullanıcı bilgileri</strong><p>Hesap ve Ek-16 formundan alınan kayıtlı veriler.</p></article>
+          <i>→</i>
+          <article><span>KAYNAK</span><strong>Yüklenen belge</strong><p>Belgeden okunan öğrenci, kurum ve yetkili alanları.</p></article>
+          <i>→</i>
+          <article><span>İŞLEM</span><strong>Karşılaştırma</strong><p>Format, tutarlılık ve iş kuralı kontrolleri.</p></article>
+          <i>→</i>
+          <article><span>ÇIKTI</span><strong>Hazırlık raporu</strong><p>Hata, uyarı ve başarılı kontrollerin özeti.</p></article>
         </div>
       </section>
 
@@ -221,6 +233,12 @@
                 <span class="warning"><i>!</i> İşveren kaşesi algılanamadı</span>
               </div>
             </article>
+          </div>
+          <div class="coverage-band reveal" aria-label="Sistem kapsamı">
+            <div><strong>5</strong><span>Desteklenen dosya formatı</span></div>
+            <div><strong>4</strong><span>Karşılaştırılan veri kaynağı</span></div>
+            <div><strong>2</strong><span>Yetkilendirilmiş kullanıcı rolü</span></div>
+            <div><strong>1</strong><span>İzlenebilir başvuru akışı</span></div>
           </div>
         </div>
       </section>
@@ -367,7 +385,7 @@
           <label>Bölüm<input class="form-control" name="department" value="Yazılım Mühendisliği" required></label>
           <label>Öğretim yılı<input class="form-control" name="academicYear" value="2026-2027 Güz" required></label>
           <label>Önceki staj günü<input class="form-control" name="previousInternshipDays" type="number" min="0" value="0" required></label>
-          <label>Telefon<input class="form-control" name="phone" placeholder="+90 5xx xxx xx xx" required></label>
+          <label class="phone-field">Telefon<div class="phone-input-group"><select class="form-control country-code" name="phoneCountryCode" aria-label="Ülke kodu"><option value="90">TR +90</option><option value="49">DE +49</option><option value="44">UK +44</option><option value="1">US/CA +1</option><option value="33">FR +33</option><option value="31">NL +31</option><option value="32">BE +32</option></select><input class="form-control" name="phone" inputmode="tel" autocomplete="tel-national" placeholder="532 123 45 67" required></div></label>
           <label>Sağlık yardımı statüsü<select class="form-control" name="healthStatus" required><option value="1">1. seçenek</option><option value="2">2. seçenek</option><option value="3">3. seçenek</option><option value="4">4. seçenek</option><option value="5">5. seçenek</option><option value="6">6. seçenek</option></select></label>
           <label class="wide">İkametgâh adresi<input class="form-control" name="address" placeholder="Mahalle, Cadde/Sokak, Bina No, Daire No, İlçe/İl" required></label>
           <label class="wide">E-posta<input class="form-control" name="email" type="email" required></label>

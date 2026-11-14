@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import readXlsxFile from "read-excel-file/node";
 import { DatasetRecord } from "../models/DatasetRecord.js";
 import { AppError } from "../utils/AppError.js";
-import { normalizeText } from "../utils/normalization.js";
+import { canonicalizePhone, normalizeText } from "../utils/normalization.js";
 
 const headerMap = new Map([
   ["ogrenci ad soyad", "name"], ["ad soyad", "name"], ["adsoyad", "name"],
@@ -26,6 +26,7 @@ function normalizeRow(row) {
   record.identityNo = String(record.identityNo ?? "").replace(/\D/g, "");
   record.previousInternshipDays = Number(record.previousInternshipDays || 0);
   record.healthStatus = Number(record.healthStatus || 0) || undefined;
+  if (record.phone) record.phone = canonicalizePhone(record.phone, "90");
   return record;
 }
 

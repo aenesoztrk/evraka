@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { canonicalizePhone } from "../utils/normalization.js";
 
 const addressSchema = new mongoose.Schema({
   neighborhood: { type: String, trim: true },
@@ -33,6 +34,10 @@ const userSchema = new mongoose.Schema({
 
 userSchema.virtual("isLocked").get(function isLocked() {
   return Boolean(this.lockUntil && this.lockUntil.getTime() > Date.now());
+});
+
+userSchema.pre("validate", function normalizeStoredPhone() {
+  if (this.phone) this.phone = canonicalizePhone(this.phone, "90");
 });
 
 userSchema.set("toJSON", {

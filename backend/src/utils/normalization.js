@@ -16,6 +16,36 @@ export function normalizePhone(value) {
   return digits;
 }
 
+export function canonicalizePhone(value, countryCode = "90") {
+  const rawValue = String(value ?? "").trim();
+  const code = String(countryCode ?? "90").replace(/\D/g, "") || "90";
+  if (!rawValue) return "";
+
+  const explicitlyInternational = rawValue.startsWith("+") || rawValue.startsWith("00");
+  let digits = rawValue.replace(/\D/g, "");
+  if (rawValue.startsWith("00")) digits = digits.slice(2);
+
+  if (explicitlyInternational && digits.startsWith(code)) {
+    digits = `${code}${digits.slice(code.length).replace(/^0+/, "")}`;
+  } else if (!explicitlyInternational) {
+    digits = digits.replace(/^0+/, "");
+    if (!digits.startsWith(code) || digits.length < code.length + 7) digits = `${code}${digits}`;
+  }
+
+  return digits ? `+${digits}` : "";
+}
+
+export function normalizeManualPhones(manualData = {}) {
+  const normalized = structuredClone(manualData || {});
+  for (const sectionName of ["student", "company", "employer"]) {
+    const section = normalized[sectionName];
+    if (!section || typeof section !== "object") continue;
+    if (section.phone) section.phone = canonicalizePhone(section.phone, section.phoneCountryCode || "90");
+    delete section.phoneCountryCode;
+  }
+  return normalized;
+}
+
 export function normalizeDate(value) {
   if (!value) return "";
   const date = value instanceof Date ? value : new Date(value);

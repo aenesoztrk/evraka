@@ -6,6 +6,7 @@ import { createEk17Docx } from "../services/ek17Service.js";
 import { submitGoogleForm } from "../services/googleFormService.js";
 import { AppError } from "../utils/AppError.js";
 import { writeAudit } from "../utils/audit.js";
+import { normalizeManualPhones } from "../utils/normalization.js";
 
 export async function dashboardStats(_request, response) {
   const [total, completed, reviewing, error, students, datasets] = await Promise.all([
@@ -140,7 +141,7 @@ export async function completeApplication(request, response) {
 export async function adminUpdateApplication(request, response) {
   const application = await Application.findById(request.params.id);
   if (!application) throw new AppError("Başvuru bulunamadı.", 404);
-  if (request.body.manualData) application.manualData = request.body.manualData;
+  if (request.body.manualData) application.manualData = normalizeManualPhones(request.body.manualData);
   if (request.body.status) application.status = request.body.status;
   await application.save();
   await writeAudit(request, "ADMIN_APPLICATION_UPDATED", { entityType: "Application", entityId: application._id });
