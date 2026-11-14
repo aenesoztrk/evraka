@@ -199,7 +199,7 @@ function phoneControl(path, value, label = "Telefon") {
 }
 
 const manualFormTemplate = () => `
-  <div class="dashboard-page-head"><div><h2>Ek-16 bilgi formu</h2><p>Belgedeki bilgilerle karşılaştırılacak alanları eksiksiz gir. Kayıtlar MongoDB’de saklanır.</p></div><div class="page-head-actions"><span class="api-state">MongoDB bağlantılı</span><button class="dash-primary" form="manual-form" type="submit">Bilgileri kaydet</button></div></div>
+  <div class="dashboard-page-head"><div><h2>Ek-16 bilgi formu</h2><p>Belgedeki bilgilerle karşılaştırılacak alanları eksiksiz gir. Bilgilerin başvuru kaydında güvenle saklanır.</p></div><div class="page-head-actions"><span class="api-state">Veri kaydı aktif</span><button class="dash-primary" form="manual-form" type="submit">Bilgileri kaydet</button></div></div>
   <form id="manual-form" class="manual-form">
     <section class="manual-section"><div class="manual-section-head"><i>01</i><div><h3>Öğrenci bilgileri</h3><p>Ek-16 belgesinin “Öğrencinin” bölümü</p></div></div><div class="manual-fields">
       <label>Ad soyad<input class="form-control" name="student.name" value="${nestedValue("student.name", state.session?.user?.name)}" required></label>
@@ -341,7 +341,7 @@ const adminOverviewTemplate = () => `
       <article class="panel-card" style="margin-top:18px"><div class="panel-card-head"><div><h3>Son başvurular</h3><p>En son güncellenen kayıtlar</p></div><button class="panel-link" data-nav="applications">Tümünü gör →</button></div>${applicationsTable(true)}</article>
     </div>
     <div>
-      <article class="panel-card"><div class="panel-card-head"><div><h3>Durum dağılımı</h3><p>MongoDB’deki güncel başvurular</p></div></div><div class="donut-wrap"><div class="donut"><strong>—</strong><small>kayıt</small></div><div class="chart-legend"><span><i></i>Veriler yükleniyor</span></div></div></article>
+      <article class="panel-card"><div class="panel-card-head"><div><h3>Durum dağılımı</h3><p>Sistemdeki güncel başvurular</p></div></div><div class="donut-wrap"><div class="donut"><strong>—</strong><small>kayıt</small></div><div class="chart-legend"><span><i></i>Veriler yükleniyor</span></div></div></article>
       <article class="panel-card" style="margin-top:18px"><div class="panel-card-head"><div><h3>Yönetim akışı</h3><p>Başvuruyu güvenle tamamlama adımları</p></div></div><div class="info-list"><div class="info-item"><i>1</i><div><b>Doğrulama raporunu inceleyin</b><span>Belge, kullanıcı profili ve test veri seti sonuçlarını karşılaştırın.</span></div></div><div class="info-item"><i>2</i><div><b>Google Form aktarımını doğrulayın</b><span>Form gönderimi başarılı olmadan kayıt tamamlanmaz.</span></div></div><div class="info-item"><i>3</i><div><b>Ek-17 belgesini oluşturun</b><span>Yalnızca tamamlanan başvurular belge üretimine açılır.</span></div></div></div></article>
     </div>
   </div>`;
@@ -702,7 +702,7 @@ async function openAdminApplication(id) {
 }
 
 async function deleteAdminApplication(id) {
-  if (!window.confirm("Bu başvuru ve MongoDB’de saklanan belge kalıcı olarak silinecek. Devam edilsin mi?")) return;
+  if (!window.confirm("Bu başvuru ve sisteme yüklenen belge kalıcı olarak silinecek. Devam edilsin mi?")) return;
   try {
     await window.EvraqaApi.deleteApplication(id);
     showToast("Başvuru silindi.");
@@ -864,7 +864,7 @@ document.addEventListener("submit", async event => {
       ? await window.EvraqaApi.updateManual(state.application._id, manualData)
       : await window.EvraqaApi.createApplication({ manualData, stage: "midterm" });
     state.application = response.data;
-    showToast("Ek-16 bilgileri MongoDB’ye kaydedildi.");
+    showToast("Ek-16 bilgileri başarıyla kaydedildi.");
     renderDashboardPage("upload");
   } catch (error) { showToast(error.message, "!"); }
 });

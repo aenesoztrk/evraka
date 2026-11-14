@@ -23,7 +23,7 @@
     try {
       response = await fetch(`${baseUrl}${path}`, { ...options, headers });
     } catch {
-      throw new Error("Backend sunucusuna ulaşılamadı. Terminalde npm run dev komutunun çalıştığını ve MongoDB bağlantısının başarılı olduğunu kontrol edin.");
+      throw new Error("Backend sunucusuna ulaşılamadı. Terminalde npm run dev komutunun çalıştığını ve veritabanı bağlantısının hazır olduğunu kontrol edin.");
     }
     const contentType = response.headers.get("content-type") || "";
     const payload = contentType.includes("application/json") ? await response.json() : await response.blob();
