@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Staj evraklarını doğrulayan, raporlayan ve yöneten modern öğrenci ve yönetici arayüzü."
+    />
+    <meta name="theme-color" content="#f5f2eb" />
+    <title>Evraqa — Staj Evrak Yönetimi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+
+    <main id="marketing-site">
+      <div class="announcement">
+        <span class="announcement-dot"></span>
+        2026–2027 Güz Dönemi başvuruları için sistem hazır
+        <button class="announcement-link" data-action="open-login" data-role="student">
+          Başvurunu kontrol et
+          <span aria-hidden="true">↗</span>
+        </button>
+      </div>
+
+      <header class="site-header" id="top">
+        <a class="brand" href="#top" aria-label="Evraqa ana sayfa">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 40 40"><path d="M11 8.5h12.5L30 15v16.5H11z"/><path d="M23.5 8.5V15H30"/><path d="M15.5 20h10M15.5 24h7M15.5 28h9"/></svg>
+          </span>
+          <span>
+            <strong>evraqa</strong>
+            <small>staj belge sistemi</small>
+          </span>
+        </a>
+
+        <nav class="main-nav" aria-label="Ana menü">
+          <a href="#how-it-works">Nasıl çalışır?</a>
+          <a href="#features">Özellikler</a>
+          <a href="#checks">Kontroller</a>
+          <a href="#faq">SSS</a>
+        </nav>
+
+        <div class="header-actions">
+          <button class="text-button" data-action="open-login" data-role="admin">Admin girişi</button>
+          <button class="primary-button compact" data-action="open-login" data-role="student">
+            Giriş yap
+            <span aria-hidden="true">→</span>
+          </button>
+          <button class="menu-button" id="menu-button" aria-label="Menüyü aç" aria-expanded="false">
+            <span></span><span></span>
+          </button>
+        </div>
+      </header>
+
+      <section class="hero section-shell">
+        <div class="hero-copy reveal">
+          <div class="eyebrow"><span></span> PROGRAMLAMA LABORATUVARI III</div>
+          <h1>Staj evrakın,<br /><em>eksiksiz</em> ve zamanında.</h1>
+          <p class="hero-lede">
+            Ek-16 belgeni yükle; biçim, tarih, imza ve öğrenci bilgisi kontrollerini tek ekranda tamamla.
+            Eksikleri anlaşılır bir raporla gör, başvurunu güvenle ilerlet.
+          </p>
+          <div class="hero-actions">
+            <button class="primary-button large" data-action="open-login" data-role="student">
+              Evrakımı kontrol et
+              <span class="button-icon" aria-hidden="true">↗</span>
+            </button>
+            <a class="secondary-button" href="#how-it-works">
+              Sistemi keşfet
+              <span aria-hidden="true">↓</span>
+            </a>
+          </div>
+          <div class="hero-meta" aria-label="Sistem özeti">
+            <div><strong>4</strong><span>dosya türü</span></div>
+            <div><strong>30+</strong><span>doğrulama kuralı</span></div>
+            <div><strong>2</strong><span>rol tabanlı panel</span></div>
+          </div>
+        </div>
+
+        <div class="hero-visual reveal delay-1" aria-label="Evrak analiz ekranı önizlemesi">
+          <div class="soft-orb orb-one"></div>
+          <div class="soft-orb orb-two"></div>
+          <div class="paper-card">
+            <div class="paper-topline">
+              <span>EK–16</span>
+              <span>Staj başvuru formu</span>
+            </div>
+            <div class="paper-heading">
+              <div class="paper-logo">K</div>
+              <div>
+                <span>KOCAELİ ÜNİVERSİTESİ</span>
+                <strong>Staj Başvuru Belgesi</strong>
+              </div>
+            </div>
+            <div class="paper-grid">
+              <div><small>Öğrenci</small><span>Örnek Öğrenci</span></div>
+              <div><small>Öğrenci No</small><span>220201•••</span></div>
+              <div class="wide"><small>Bölüm</small><span>Yazılım Mühendisliği</span></div>
+              <div><small>Başlangıç</small><span>06.07.2027</span></div>
+              <div><small>Bitiş</small><span>24.08.2027</span></div>
+            </div>
+            <div class="signature-row">
+              <div><span></span><small>Öğrenci onayı</small></div>
+              <div class="stamped"><span>ONAY</span><small>İşveren kaşe / imza</small></div>
+            </div>
+            <div class="scan-line"></div>
+          </div>
+          <div class="analysis-card float-card">
+            <div class="status-icon success">✓</div>
+            <div>
+              <small>Belge analizi</small>
+              <strong>28 / 30 kontrol tamam</strong>
+            </div>
+            <span class="mini-pill">%93</span>
+          </div>
+          <div class="deadline-card float-card">
+            <small>Önerilen son teslim</small>
+            <strong>06 Haziran 2027</strong>
+            <div class="deadline-bar"><span></span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="credibility-strip" aria-label="Sistem özellikleri">
+        <div><span>01</span> Belge türüne uygun otomatik okuma</div>
+        <div><span>02</span> Kural tabanlı doğrulama</div>
+        <div><span>03</span> Rol bazlı yetkilendirme</div>
+        <div><span>04</span> Anlaşılır sonuç raporu</div>
+      </section>
+
+      <section class="section-shell narrative-section" id="how-it-works">
+        <div class="section-kicker reveal">NASIL ÇALIŞIR?</div>
+        <div class="section-intro reveal">
+          <h2>Ek-16 kontrolünü<br /><em>izlenebilir bir sürece</em> dönüştürür.</h2>
+          <p>Bilgilerini kaydet, belgeni yükle ve manuel veriler ile belge alanlarının karşılaştırmalı sonucunu tek raporda incele.</p>
+        </div>
+        <div class="steps-grid">
+          <article class="step-card reveal">
+            <div class="step-number">01</div>
+            <div class="step-illustration upload-illustration" aria-hidden="true">
+              <div class="mini-document"><span></span><span></span><span></span></div>
+              <div class="upload-arrow">↑</div>
+            </div>
+            <h3>Ek-16’yı yükle</h3>
+            <p>PDF, Word, JPEG veya PNG formatındaki belgeni sürükleyip bırak.</p>
+            <span class="step-tag">Maks. 10 MB</span>
+          </article>
+          <article class="step-card feature-step reveal delay-1">
+            <div class="step-number">02</div>
+            <div class="step-illustration scan-illustration" aria-hidden="true">
+              <div class="scan-doc"><i></i><i></i><i></i><b></b></div>
+              <span class="scan-badge">OCR</span>
+            </div>
+            <h3>Sistem kontrol etsin</h3>
+            <p>Kimlik, iletişim, tarih, staj günü ve onay alanları tanımlı doğrulama kurallarıyla değerlendirilsin.</p>
+            <span class="step-tag">Çok katmanlı kontrol</span>
+          </article>
+          <article class="step-card reveal delay-2">
+            <div class="step-number">03</div>
+            <div class="step-illustration report-illustration" aria-hidden="true">
+              <div class="score-ring">93<small>%</small></div>
+              <div class="report-lines"><span></span><span></span><span></span></div>
+            </div>
+            <h3>Raporu incele</h3>
+            <p>Eksik veya hatalı alanları öncelik sırasıyla gör, düzelt ve yeniden yükle.</p>
+            <span class="step-tag">Anlık sonuç</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="feature-section" id="features">
+        <div class="section-shell">
+          <div class="feature-heading reveal">
+            <span class="section-kicker light">TEK PANEL, TAM KONTROL</span>
+            <h2>Belgenin her ayrıntısı<br />doğru yerde.</h2>
+          </div>
+          <div class="bento-grid">
+            <article class="bento-card bento-large reveal">
+              <div class="bento-copy">
+                <span class="bento-label">ÖĞRENCİ PANELİ</span>
+                <h3>Başvurunun hangi aşamada olduğunu hep bil.</h3>
+                <p>Yüklendi’den Tamamlandı’ya uzanan durum akışını, kontrol sonuçlarını ve teslim tarihini tek görünümde takip et.</p>
+              </div>
+              <div class="timeline-demo" aria-hidden="true">
+                <div class="timeline-row done"><i>✓</i><span><b>Yüklendi</b><small>Belge sisteme alındı</small></span><time>10:24</time></div>
+                <div class="timeline-row active"><i></i><span><b>İnceleniyor</b><small>Doğrulama kuralları çalıştırılıyor</small></span><time>Şimdi</time></div>
+                <div class="timeline-row"><i></i><span><b>Onaylandı</b><small>Kontroller tamamlandığında</small></span></div>
+              </div>
+            </article>
+            <article class="bento-card bento-date reveal delay-1">
+              <div class="date-icon" aria-hidden="true">30</div>
+              <span class="bento-label">TARİH MOTORU</span>
+              <h3>Resmî tatilleri hesaba katar.</h3>
+              <p>Seçtiğin haftalık günlere göre gerçek staj süresini hesaplar.</p>
+              <div class="day-chips" aria-hidden="true"><span class="on">Pzt</span><span class="on">Sal</span><span>Çar</span><span class="on">Per</span><span>Cum</span></div>
+            </article>
+            <article class="bento-card bento-admin reveal delay-1">
+              <span class="bento-label">ADMIN PANELİ</span>
+              <h3>Filtrele, incele, sonuçlandır.</h3>
+              <div class="mini-table" aria-hidden="true">
+                <div class="mini-table-head"><span>Öğrenci</span><span>Durum</span></div>
+                <div><span><i class="avatar a1">01</i>Öğrenci 01</span><b class="table-status green">Tamamlandı</b></div>
+                <div><span><i class="avatar a2">02</i>Öğrenci 02</span><b class="table-status amber">İnceleniyor</b></div>
+                <div><span><i class="avatar a3">03</i>Öğrenci 03</span><b class="table-status red">Eksik</b></div>
+              </div>
+            </article>
+            <article class="bento-card bento-report reveal delay-2">
+              <span class="bento-label">OKUNABİLİR RAPOR</span>
+              <h3>Teknik sonuçlar, sade anlatım.</h3>
+              <div class="report-checks" aria-hidden="true">
+                <span><i>✓</i> Kimlik bilgileri eşleşiyor</span>
+                <span><i>✓</i> Telefon formatı doğru</span>
+                <span class="warning"><i>!</i> İşveren kaşesi algılanamadı</span>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-shell checks-section" id="checks">
+        <div class="checks-copy reveal">
+          <span class="section-kicker">KURAL TABANLI DOĞRULAMA</span>
+          <h2>Her alan için<br /><em>açıklanabilir doğrulama.</em></h2>
+          <p>Belgedeki alanlar birbirinden bağımsız değil; kullanıcı verisi, akademik dönem ve staj takvimiyle birlikte değerlendirilir.</p>
+          <button class="secondary-button dark" data-action="open-login" data-role="student">Kontrol raporunu görüntüle <span>→</span></button>
+        </div>
+        <div class="checks-list reveal delay-1">
+          <article>
+            <span class="check-icon">01</span>
+            <div><h3>Kimlik & iletişim</h3><p>TC / yabancı kimlik, e-posta, telefon ve adres formatı kontrolleri.</p></div>
+            <i>✓</i>
+          </article>
+          <article>
+            <span class="check-icon">02</span>
+            <div><h3>Tarih & dönem</h3><p>Öğretim yılı tutarlılığı ve en az 30 gün önce teslim kuralı.</p></div>
+            <i>✓</i>
+          </article>
+          <article>
+            <span class="check-icon">03</span>
+            <div><h3>İmza & kaşe</h3><p>İşveren alanının doluluğu, imza ve kaşe varlığı analizi.</p></div>
+            <i>✓</i>
+          </article>
+          <article>
+            <span class="check-icon">04</span>
+            <div><h3>Staj günü hesabı</h3><p>Haftalık seçime ve resmî tatillere göre gün sayısı karşılaştırması.</p></div>
+            <i>✓</i>
+          </article>
+        </div>
+      </section>
+
+      <section class="cta-section">
+        <div class="cta-inner reveal">
+          <span class="cta-kicker">HAZIR OLDUĞUNDA</span>
+          <h2>Belgeni son kez<br />kontrol etmeye hazır mısın?</h2>
+          <p>Öğrenci hesabını oluştur, bilgilerini kaydet ve Ek-16 belgeni karşılaştırmalı olarak analiz et.</p>
+          <button class="primary-button inverted large" data-action="open-login" data-role="student">Öğrenci panelini aç <span>↗</span></button>
+          <div class="cta-note"><span>✓</span> Vize ve final gereksinimleri tek sistemde.</div>
+        </div>
+      </section>
+
+      <section class="section-shell faq-section" id="faq">
+        <div class="faq-heading reveal"><span class="section-kicker">SIK SORULANLAR</span><h2>Süreç hakkında merak edilenler.</h2></div>
+        <div class="faq-list reveal delay-1">
+          <details open><summary>Hangi dosya türlerini yükleyebilirim?<span>+</span></summary><p>Word (.doc / .docx), PDF, JPEG ve PNG dosyaları kabul edilir. Varsayılan dosya boyutu üst sınırı 10 MB’dir.</p></details>
+          <details><summary>Belgem hatalı bulunursa ne olur?<span>+</span></summary><p>Hatalı veya eksik alanlar raporda açıklanır. Belgeyi düzelttikten sonra yeniden yükleyerek kontrolleri tekrar çalıştırabilirsin.</p></details>
+          <details><summary>Tamamlanan belgeyi değiştirebilir miyim?<span>+</span></summary><p>Tamamlandı statüsündeki belgeler öğrenci tarafından değiştirilemez. Gerekli yönetim işlemleri admin panelinden yapılır.</p></details>
+          <details><summary>OCR hangi dosyalarda çalışır?<span>+</span></summary><p>JPEG ve PNG belgelerde Tesseract OCR kullanılır. DOC, DOCX ve metin katmanlı PDF dosyaları kendi belge okuyucularıyla analiz edilir.</p></details>
+        </div>
+      </section>
+
+      <footer class="site-footer">
+        <div class="footer-main section-shell">
+          <a class="brand footer-brand" href="#top">
+            <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M11 8.5h12.5L30 15v16.5H11z"/><path d="M23.5 8.5V15H30"/><path d="M15.5 20h10M15.5 24h7M15.5 28h9"/></svg></span>
+            <span><strong>evraqa</strong><small>staj belge sistemi</small></span>
+          </a>
+          <p>Ek-16 başvurularını öğrenci, belge ve veri seti bilgileriyle karşılaştıran; doğrulama ve yönetim sürecini tek panelde birleştiren proje sistemi.</p>
+          <div class="footer-links"><a href="#how-it-works">Nasıl çalışır?</a><a href="#features">Özellikler</a><a href="#faq">SSS</a><button data-action="open-login" data-role="admin">Admin girişi</button></div>
+        </div>
+        <div class="footer-bottom section-shell"><span>© 2026 Evraqa · PROLAB III Projesi</span><span>Kocaeli · Türkiye</span></div>
+      </footer>
+    </main>
+
+    <section id="app-shell" class="app-shell" hidden>
+      <aside class="app-sidebar" id="app-sidebar">
+        <div class="sidebar-top">
+          <button class="brand dashboard-brand" data-dashboard-home aria-label="Panel ana sayfası">
+            <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M11 8.5h12.5L30 15v16.5H11z"/><path d="M23.5 8.5V15H30"/><path d="M15.5 20h10M15.5 24h7M15.5 28h9"/></svg></span>
+            <span><strong>evraqa</strong><small id="sidebar-role">öğrenci paneli</small></span>
+          </button>
+          <button class="sidebar-close" id="sidebar-close" aria-label="Menüyü kapat">×</button>
+        </div>
+        <div class="sidebar-profile">
+          <div class="profile-avatar" id="profile-avatar">DY</div>
+          <div><strong id="profile-name">Öğrenci</strong><span id="profile-number">—</span></div>
+          <button aria-label="Profil seçenekleri">•••</button>
+        </div>
+        <nav class="side-nav" id="side-nav" aria-label="Panel menüsü"></nav>
+        <div class="sidebar-help">
+          <div class="help-icon">?</div>
+          <strong>Yardıma mı ihtiyacın var?</strong>
+          <span>Süreç hakkında hızlı destek al.</span>
+          <button data-toast="Destek merkezi bu proje kapsamına dahil değildir.">Destek merkezi</button>
+        </div>
+        <button class="logout-button" id="logout-button"><span>↪</span> Güvenli çıkış</button>
+      </aside>
+
+      <div class="dashboard-area">
+        <header class="dashboard-header">
+          <div class="dashboard-header-left">
+            <button class="dashboard-menu" id="dashboard-menu" aria-label="Menüyü aç"><span></span><span></span><span></span></button>
+            <div><span id="dashboard-breadcrumb">Öğrenci Paneli / Genel Bakış</span><h1 id="dashboard-title">Genel Bakış</h1></div>
+          </div>
+          <div class="dashboard-header-actions">
+            <div class="dashboard-search"><span>⌕</span><input type="search" placeholder="Ara..." aria-label="Panelde ara" /><kbd>⌘K</kbd></div>
+            <button class="icon-button" data-toast="Yeni bildirimin bulunmuyor." aria-label="Bildirimler"><span class="notification-dot"></span>♢</button>
+            <button class="header-profile" data-nav="profile"><span id="header-avatar">Ö</span><div><strong id="header-name">Öğrenci</strong><small id="header-role">Öğrenci</small></div><i>⌄</i></button>
+          </div>
+        </header>
+        <div id="dashboard-content" class="dashboard-content"></div>
+      </div>
+    </section>
+
+    <div class="modal-backdrop" id="login-modal" hidden>
+      <div class="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-title">
+        <button class="modal-close" data-action="close-login" aria-label="Giriş penceresini kapat">×</button>
+        <div class="login-brand">
+          <span class="brand-mark"><svg viewBox="0 0 40 40"><path d="M11 8.5h12.5L30 15v16.5H11z"/><path d="M23.5 8.5V15H30"/><path d="M15.5 20h10M15.5 24h7M15.5 28h9"/></svg></span>
+          <span>evraqa</span>
+        </div>
+        <div class="role-tabs" role="tablist">
+          <button class="role-tab active" data-login-role="student" role="tab">Öğrenci</button>
+          <button class="role-tab" data-login-role="admin" role="tab">Yönetici</button>
+        </div>
+        <div class="login-heading"><span id="login-kicker">ÖĞRENCİ GİRİŞİ</span><h2 id="login-title">Tekrar hoş geldin.</h2><p id="login-copy">Evrak durumunu görüntülemek için bilgilerinle giriş yap.</p></div>
+        <form id="login-form">
+          <label>E-posta veya öğrenci numarası<div class="field-wrap"><span>◎</span><input id="login-email" type="text" value="220201045" autocomplete="username" required /></div></label>
+          <label>Şifre<div class="field-wrap"><span>◇</span><input id="login-password" type="password" autocomplete="current-password" required /><button type="button" id="toggle-password" aria-label="Şifreyi göster">◉</button></div></label>
+          <div class="form-options"><label class="checkbox"><input type="checkbox" checked /><span></span>Beni hatırla</label><button type="button" data-toast="Şifre sıfırlama proje kapsamına dahil değildir.">Şifremi unuttum</button></div>
+          <button type="submit" class="primary-button login-submit">Giriş yap <span>→</span></button>
+        </form>
+        <button class="register-link" id="open-register" type="button">Hesabın yok mu? <strong>Öğrenci hesabı oluştur</strong></button>
+        <p class="login-note"><span>i</span> Yönetici hesabı ilk çalıştırmada backend ortam değişkenlerinden oluşturulur.</p>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="register-modal" hidden>
+      <div class="action-modal register-modal" role="dialog" aria-modal="true" aria-labelledby="register-title">
+        <button class="modal-close" data-action="close-register" aria-label="Kayıt penceresini kapat">×</button>
+        <span class="modal-kicker">ÖĞRENCİ KAYDI</span>
+        <h2 id="register-title">Hesabını oluştur</h2>
+        <p>Kimlik ve iletişim bilgilerin Ek-16 karşılaştırmasında kullanılacaktır.</p>
+        <form id="register-form" class="register-form">
+          <label>Ad soyad<input class="form-control" name="name" required></label>
+          <label>Öğrenci numarası<input class="form-control" name="studentNo" required></label>
+          <label>T.C. / yabancı kimlik no<input class="form-control" name="identityNo" inputmode="numeric" minlength="11" maxlength="11" required></label>
+          <label>Uyruk<select class="form-control" name="nationality"><option>T.C.</option><option>Yabancı</option></select></label>
+          <label>Doğum tarihi<input class="form-control" name="birthDate" type="date" required></label>
+          <label>Bölüm<input class="form-control" name="department" value="Yazılım Mühendisliği" required></label>
+          <label>Öğretim yılı<input class="form-control" name="academicYear" value="2026-2027 Güz" required></label>
+          <label>Önceki staj günü<input class="form-control" name="previousInternshipDays" type="number" min="0" value="0" required></label>
+          <label>Telefon<input class="form-control" name="phone" placeholder="+90 5xx xxx xx xx" required></label>
+          <label>Sağlık yardımı statüsü<select class="form-control" name="healthStatus" required><option value="1">1. seçenek</option><option value="2">2. seçenek</option><option value="3">3. seçenek</option><option value="4">4. seçenek</option><option value="5">5. seçenek</option><option value="6">6. seçenek</option></select></label>
+          <label class="wide">İkametgâh adresi<input class="form-control" name="address" placeholder="Mahalle, Cadde/Sokak, Bina No, Daire No, İlçe/İl" required></label>
+          <label class="wide">E-posta<input class="form-control" name="email" type="email" required></label>
+          <label class="wide">Şifre<div class="register-password-wrap"><input class="form-control" id="register-password" name="password" type="password" minlength="8" autocomplete="new-password" required><button type="button" class="password-visibility" data-password-toggle="register-password" aria-label="Şifreyi göster">Göster</button></div>
+            <div class="password-strength" aria-live="polite"><div class="password-strength-track"><span></span></div><small id="password-strength-label">En az 8 karakter, büyük/küçük harf ve rakam.</small></div>
+          </label>
+          <label class="wide">Şifre tekrar<div class="register-password-wrap"><input class="form-control" id="register-password-confirm" name="passwordConfirm" type="password" minlength="8" autocomplete="new-password" required><button type="button" class="password-visibility" data-password-toggle="register-password-confirm" aria-label="Şifre tekrarını göster">Göster</button></div><small id="password-match-label">Şifreler aynı olmalıdır.</small></label>
+          <button class="primary-button login-submit wide" type="submit">Hesabı oluştur <span>→</span></button>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="upload-modal" hidden>
+      <div class="action-modal upload-action-modal" role="dialog" aria-modal="true" aria-labelledby="upload-modal-title">
+        <button class="modal-close" data-action="close-upload" aria-label="Yükleme penceresini kapat">×</button>
+        <div class="modal-icon">↑</div>
+        <span class="modal-kicker">YENİ BELGE</span>
+        <h2 id="upload-modal-title">Ek-16 belgeni yükle</h2>
+        <p>Belgen analiz edilmeden önce dosya türü ve boyutu kontrol edilir.</p>
+        <label class="upload-stage-label">Sunum aşaması<select id="upload-stage" class="form-control"><option value="midterm">Vize · dosya ve alan karşılaştırması</option><option value="final" selected>Final · OCR ve tüm doğrulamalar</option></select></label>
+        <label class="drop-zone" id="drop-zone">
+          <input type="file" id="file-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" hidden />
+          <span class="drop-zone-icon">⌁</span>
+          <strong>Dosyayı buraya bırak</strong>
+          <span>veya bilgisayarından seçmek için tıkla</span>
+          <small>PDF, DOC, DOCX, JPEG, PNG · En fazla 10 MB</small>
+        </label>
+        <div class="upload-selected" id="upload-selected" hidden></div>
+        <button class="primary-button upload-confirm" id="upload-confirm" disabled>Analizi başlat <span>→</span></button>
+      </div>
+    </div>
+
+    <div class="toast-region" id="toast-region" aria-live="polite"></div>
+
+    <script src="api.js"></script>
+    <script src="index.js"></script>
+  </body>
+</html>

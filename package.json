@@ -1,0 +1,12 @@
+{
+  "name": "evraqa-staj-evrak-sistemi",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Ek-16 staj evrak doğrulama ve yönetim sistemi",
+  "scripts": {
+    "dev": "npm --prefix backend run dev",
+    "start": "npm --prefix backend start",
+    "test": "npm --prefix backend test",
+    "install:all": "npm --prefix backend install"
+  }
+}
