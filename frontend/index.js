@@ -913,7 +913,8 @@ document.querySelector("#register-form").addEventListener("submit", async event 
   if (password !== confirmation) {
     document.querySelector("#password-match-label").textContent = "Şifreler eşleşmiyor.";
     document.querySelector("#password-match-label").className = "password-match-error";
-    return showToast("Şifre ve şifre tekrarı eşleşmiyor.", "!");
+    document.querySelector("#register-password-confirm").focus();
+    return;
   }
   const button = event.target.querySelector("button[type='submit']");
   button.disabled = true;
