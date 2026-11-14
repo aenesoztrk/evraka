@@ -42,7 +42,7 @@ app.use("/api", (request, response, next) => {
   if (mongoose.connection.readyState === 1) return next();
   return response.status(503).json({
     success: false,
-    message: "Web sitesi çalışıyor ancak MongoDB bağlantısı henüz hazır değil. Atlas Network Access ayarını kontrol edin.",
+    message: "Web sitesi çalışıyor ancak veritabanı bağlantısı henüz hazır değil. Sunucu bağlantı ayarlarını kontrol edin.",
   });
 });
 app.use("/api/auth", authLimiter, authRouter);
