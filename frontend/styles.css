@@ -359,3 +359,4 @@ h1 em, h2 em { font-family: Georgia, "Times New Roman", serif; font-weight: 400;
 @media (prefers-reduced-motion: reduce){
   html{scroll-behavior:auto}.scan-line,.progress-spinner,.progress-bar-wide span{animation:none}.reveal{opacity:1;transform:none;transition:none}*{transition-duration:.01ms!important}
 }
+.dataset-drop.dragging{border-color:#173f39;background:#eef4f0}.dataset-drop.busy{opacity:.75}.dataset-drop button:disabled{opacity:.6;cursor:progress}.dataset-result{margin-top:18px;padding-top:16px;border-top:1px solid #ebefed}.activity-item i.warn{background:#f8e8d4;color:#a8691f}.activity-item i.fail{background:#f5ddda;color:#a44f47}

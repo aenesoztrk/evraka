@@ -109,9 +109,17 @@ export async function deleteDatasetBatch(request, response) {
 }
 
 export async function uploadTestDataset(request, response) {
-  if (!request.file) throw new AppError("Veri seti dosyası zorunludur.", 400);
-  const result = await importDataset(request.file.buffer, request.user._id, request.file.originalname);
-  await writeAudit(request, "DATASET_IMPORTED", { entityType: "DatasetRecord", metadata: result });
+  if (!request.files?.length) throw new AppError("Veri seti dosyası zorunludur.", 400);
+  const result = await importDataset(request.files, request.user._id);
+  await writeAudit(request, "DATASET_IMPORTED", {
+    entityType: "DatasetRecord",
+    metadata: {
+      importBatch: result.importBatch,
+      rowCount: result.rowCount,
+      insertedCount: result.insertedCount,
+      files: result.files.map(({ fileName, type, status }) => ({ fileName, type, status })),
+    },
+  });
   response.status(201).json({ success: true, data: result });
 }
 

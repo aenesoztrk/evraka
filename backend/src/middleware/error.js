@@ -6,7 +6,12 @@ export function notFoundHandler(request, response) {
 
 export function errorHandler(error, _request, response, _next) {
   if (error instanceof multer.MulterError) {
-    const message = error.code === "LIMIT_FILE_SIZE" ? "Dosya boyutu sınırı aşıldı." : error.message;
+    const messages = {
+      LIMIT_FILE_SIZE: "Dosya boyutu sınırı aşıldı.",
+      LIMIT_FILE_COUNT: "Tek seferde yüklenebilecek dosya sayısı aşıldı.",
+      LIMIT_UNEXPECTED_FILE: "Tek seferde yüklenebilecek dosya sayısı aşıldı veya beklenmeyen dosya alanı gönderildi.",
+    };
+    const message = messages[error.code] || error.message;
     return response.status(400).json({ success: false, message });
   }
   if (error.name === "ValidationError") {

@@ -67,9 +67,9 @@
     datasetHistory: () => request("/admin/datasets"),
     deleteDatasetBatch: (batch) => request(`/admin/datasets/${encodeURIComponent(batch)}`, { method: "DELETE" }),
     adminApplications: (query = "") => request(`/admin/applications${query ? `?${query}` : ""}`),
-    uploadDataset: (file) => {
+    uploadDataset: (files) => {
       const form = new FormData();
-      form.append("dataset", file);
+      for (const file of files) form.append("dataset", file);
       return request("/admin/dataset", { method: "POST", body: form });
     },
     completeApplication: (id, force = false) => request(`/admin/applications/${id}/complete`, json("POST", { force })),

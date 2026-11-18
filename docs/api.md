@@ -34,7 +34,7 @@ Belge yüklerken `stage=midterm` vize kapsamını, `stage=final` tüm doğrulama
 | GET | `/admin/reports` | Gerçek doğrulama ve OCR rapor istatistikleri |
 | GET | `/admin/applications` | Filtreli liste |
 | GET | `/admin/applications/export.csv` | Başvuru listesini CSV olarak indirir |
-| POST | `/admin/dataset` | XLSX/CSV test veri seti |
+| POST | `/admin/dataset` | Test veri seti: `dataset` alanında 1–20 dosya (XLSX, CSV veya EK-16 PDF). Yanıtta her dosya için `files[]` analiz raporu döner |
 | GET | `/admin/datasets` | Veri seti aktarım geçmişi |
 | DELETE | `/admin/datasets/:batch` | Bir veri seti aktarımını siler |
 | PATCH | `/admin/applications/:id` | Başvuruyu günceller |

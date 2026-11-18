@@ -7,6 +7,8 @@ const state = {
   application: null,
   adminApplications: [],
   ek17ApplicationId: null,
+  datasetImport: null,
+  datasetUploading: false,
 };
 
 const userProfiles = {
@@ -368,11 +370,36 @@ const applicationsTemplate = (completed = false) => `
     ${applicationsTable(false, completed)}
   </article>`;
 
+const datasetStatusView = {
+  imported: { icon: "✓", className: "", label: "Aktarıldı" },
+  partial: { icon: "!", className: "warn", label: "Eksik alanlarla aktarıldı" },
+  skipped: { icon: "–", className: "warn", label: "Atlandı" },
+  failed: { icon: "×", className: "fail", label: "Okunamadı" },
+};
+
+function datasetImportResultTemplate() {
+  const result = state.datasetImport;
+  if (!result?.files?.length) return "";
+  const summary = result.rowCount
+    ? `${result.rowCount} öğrenci kaydı aktarıldı`
+    : "Hiçbir kayıt aktarılamadı";
+  const items = result.files.map(file => {
+    const view = datasetStatusView[file.status] || datasetStatusView.failed;
+    const detail = [
+      file.studentNo && file.name ? `${file.studentNo} · ${file.name}` : "",
+      file.type === "pdf" && file.method ? (file.method.includes("ocr") ? `OCR${file.confidence !== undefined ? ` · güven %${file.confidence}` : ""}` : "PDF metni") : "",
+      file.message || "",
+    ].filter(Boolean).join(" · ");
+    return `<div class="activity-item"><i class="${view.className}">${view.icon}</i><div><b>${escapeHtml(file.fileName)}</b><span>${escapeHtml(view.label)}${detail ? ` · ${escapeHtml(detail)}` : ""}</span></div></div>`;
+  }).join("");
+  return `<div class="dataset-result"><div class="panel-card-head"><div><h3>Son yükleme analizi</h3><p>${escapeHtml(summary)} · ${result.files.length} dosya incelendi</p></div></div><div class="activity-list">${items}</div></div>`;
+}
+
 const datasetTemplate = () => `
-  <div class="dashboard-page-head"><div><h2>Test veri seti</h2><p>Öğrenci kayıtlarını sisteme aktarmak için Excel veya CSV dosyası yükle.</p></div><div class="page-head-actions"><a class="dash-secondary" href="../sample-data/students.csv" download>↓ Örnek şablon</a></div></div>
+  <div class="dashboard-page-head"><div><h2>Test veri seti</h2><p>Öğrenci kayıtlarını sisteme aktarmak için Excel/CSV dosyası veya toplu EK-16 PDF'leri yükle.</p></div><div class="page-head-actions"><a class="dash-secondary" href="../sample-data/students.csv" download>↓ Örnek şablon</a></div></div>
   <div class="dashboard-grid">
-    <article class="panel-card"><div class="panel-card-head"><div><h3>Veri seti yükle</h3><p>.xlsx veya .csv · en fazla 5 MB</p></div></div><div class="dataset-drop"><div><div class="dataset-icon">⇧</div><h3>Öğrenci veri dosyasını seç</h3><p>Dosyayı buraya sürükle veya bilgisayarından seç.</p><input id="dataset-input" type="file" accept=".xlsx,.csv" hidden><button data-dataset-upload>Dosya seç</button></div></div></article>
-    <div><article class="panel-card"><div class="panel-card-head"><div><h3>Aktarım geçmişi</h3><p>Son 20 veri seti yüklemesi</p></div></div><div class="activity-list" id="dataset-history"><div class="activity-item"><i>…</i><div><b>Yükleniyor</b><span>Aktarım kayıtları getiriliyor.</span></div></div></div></article><article class="panel-card" style="margin-top:18px"><div class="panel-card-head"><div><h3>Zorunlu sütunlar</h3><p>Dosyada bulunması gereken alanlar</p></div></div><div class="info-list"><div class="info-item"><i>1</i><div><b>Kimlik</b><span>Ad soyad, kimlik no, uyruk, öğrenci no, doğum tarihi.</span></div></div><div class="info-item"><i>2</i><div><b>Akademik bilgi</b><span>Bölüm, teslim yılı ve önceki staj gün sayısı.</span></div></div><div class="info-item"><i>3</i><div><b>İletişim</b><span>Adres, e-posta, telefon ve sağlık yardımı statüsü.</span></div></div></div></article></div>
+    <article class="panel-card"><div class="panel-card-head"><div><h3>Veri seti yükle</h3><p>.xlsx, .csv veya .pdf · tek seferde en fazla 20 dosya · dosya başına en fazla 10 MB</p></div></div><div class="dataset-drop${state.datasetUploading ? " busy" : ""}"><div><div class="dataset-icon">${state.datasetUploading ? "…" : "⇧"}</div><h3>${state.datasetUploading ? "Dosyalar analiz ediliyor" : "Öğrenci veri dosyalarını seç"}</h3><p>${state.datasetUploading ? "Taranmış PDF'lerde OCR çalıştığı için bu işlem birkaç dakika sürebilir." : "Dosyaları buraya sürükle veya bilgisayarından seç. Birden fazla PDF seçebilirsin."}</p><input id="dataset-input" type="file" accept=".xlsx,.csv,.pdf" multiple hidden><button data-dataset-upload${state.datasetUploading ? " disabled" : ""}>${state.datasetUploading ? "Analiz ediliyor…" : "Dosya seç"}</button></div></div>${datasetImportResultTemplate()}</article>
+    <div><article class="panel-card"><div class="panel-card-head"><div><h3>Aktarım geçmişi</h3><p>Son 20 veri seti yüklemesi</p></div></div><div class="activity-list" id="dataset-history"><div class="activity-item"><i>…</i><div><b>Yükleniyor</b><span>Aktarım kayıtları getiriliyor.</span></div></div></div></article><article class="panel-card" style="margin-top:18px"><div class="panel-card-head"><div><h3>Zorunlu sütunlar</h3><p>Dosyada bulunması gereken alanlar</p></div></div><div class="info-list"><div class="info-item"><i>1</i><div><b>Kimlik</b><span>Ad soyad, kimlik no, uyruk, öğrenci no, doğum tarihi.</span></div></div><div class="info-item"><i>2</i><div><b>Akademik bilgi</b><span>Bölüm, teslim yılı ve önceki staj gün sayısı.</span></div></div><div class="info-item"><i>3</i><div><b>İletişim</b><span>Adres, e-posta, telefon ve sağlık yardımı statüsü.</span></div></div><div class="info-item"><i>4</i><div><b>PDF yüklemesi</b><span>Her PDF bir öğrencinin EK-16 formu olmalı. Öğrenci no ve ad soyad okunamayan dosyalar atlanır; eksik alanlar raporda gösterilir.</span></div></div></div></article></div>
   </div>`;
 
 const reportsAdminTemplate = () => `
@@ -688,12 +715,27 @@ async function saveFormUrl(url, statusElement) {
   } catch (error) { statusElement.innerHTML = `<span>!</span> ${escapeHtml(error.message)}`; }
 }
 
-async function uploadDatasetFile(file) {
+async function uploadDatasetFiles(fileList) {
+  const files = [...(fileList || [])];
+  if (!files.length || state.datasetUploading) return;
+  if (files.length > 20) { showToast("Tek seferde en fazla 20 dosya yüklenebilir.", "!"); return; }
+  const unsupported = files.find(file => !/\.(xlsx|csv|pdf)$/i.test(file.name));
+  if (unsupported) { showToast(`${unsupported.name}: yalnızca .xlsx, .csv veya .pdf yüklenebilir.`, "!"); return; }
+  state.datasetUploading = true;
+  state.datasetImport = null;
+  renderDashboardPage("dataset");
   try {
-    const response = await window.EvraqaApi.uploadDataset(file);
-    showToast(`${response.data.rowCount} öğrenci kaydı içe aktarıldı.`);
-    renderDashboardPage("dataset");
-  } catch (error) { showToast(error.message, "!"); }
+    const response = await window.EvraqaApi.uploadDataset(files);
+    state.datasetImport = response.data;
+    const problems = response.data.files.filter(file => file.status !== "imported").length;
+    showToast(`${response.data.rowCount} öğrenci kaydı içe aktarıldı${problems ? `, ${problems} dosyada uyarı var` : ""}.`, problems ? "!" : "✓");
+  } catch (error) {
+    if (Array.isArray(error.details)) state.datasetImport = { rowCount: 0, files: error.details };
+    showToast(error.message, "!");
+  } finally {
+    state.datasetUploading = false;
+    if (state.page === "dataset") renderDashboardPage("dataset");
+  }
 }
 
 async function completeAdminApplication(id) {
@@ -833,7 +875,7 @@ document.addEventListener("click", event => {
 
 document.addEventListener("change", event => {
   if (event.target.matches("#file-input")) handleFile(event.target.files[0]);
-  if (event.target.matches("#dataset-input") && event.target.files[0]) uploadDatasetFile(event.target.files[0]);
+  if (event.target.matches("#dataset-input") && event.target.files.length) uploadDatasetFiles(event.target.files);
   if (event.target.matches("[data-application-filter]")) loadAdminApplicationsFromFilters().catch(error => showToast(error.message, "!"));
   if (event.target.matches("#ek17-application")) {
     state.ek17ApplicationId = event.target.value;
@@ -881,6 +923,8 @@ document.addEventListener("submit", async event => {
 });
 
 document.addEventListener("dragover", event => {
+  const datasetDrop = event.target.closest(".dataset-drop");
+  if (datasetDrop) { event.preventDefault(); datasetDrop.classList.add("dragging"); return; }
   const dropZone = event.target.closest("#drop-zone");
   if (!dropZone) return;
   event.preventDefault();
@@ -889,9 +933,17 @@ document.addEventListener("dragover", event => {
 
 document.addEventListener("dragleave", event => {
   event.target.closest("#drop-zone")?.classList.remove("dragging");
+  event.target.closest(".dataset-drop")?.classList.remove("dragging");
 });
 
 document.addEventListener("drop", event => {
+  const datasetDrop = event.target.closest(".dataset-drop");
+  if (datasetDrop) {
+    event.preventDefault();
+    datasetDrop.classList.remove("dragging");
+    uploadDatasetFiles(event.dataTransfer.files);
+    return;
+  }
   const dropZone = event.target.closest("#drop-zone");
   if (!dropZone) return;
   event.preventDefault();
