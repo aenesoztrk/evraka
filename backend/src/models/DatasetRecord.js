@@ -1,5 +1,15 @@
 import mongoose from "mongoose";
 
+// Kaydın çıkarıldığı dosya. PDF'lerin içeriği saklanır ki admin belgeyi sonradan görüntüleyebilsin.
+const sourceFileSchema = new mongoose.Schema({
+  originalName: String,
+  mimeType: String,
+  size: Number,
+  sha256: String,
+  stored: { type: Boolean, default: false },
+  data: { type: Buffer, select: false },
+}, { _id: false });
+
 const datasetRecordSchema = new mongoose.Schema({
   studentNo: { type: String, required: true, index: true },
   name: { type: String, required: true, trim: true },
@@ -15,6 +25,7 @@ const datasetRecordSchema = new mongoose.Schema({
   healthStatus: { type: Number, min: 1, max: 6 },
   importBatch: { type: String, required: true, index: true },
   importedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  sourceFile: sourceFileSchema,
 }, { timestamps: true });
 
 datasetRecordSchema.index({ studentNo: 1, importBatch: 1 }, { unique: true });

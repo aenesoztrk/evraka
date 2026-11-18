@@ -6,6 +6,7 @@ import { createEk17Docx } from "../services/ek17Service.js";
 import { submitGoogleForm } from "../services/googleFormService.js";
 import { AppError } from "../utils/AppError.js";
 import { writeAudit } from "../utils/audit.js";
+import { sendStoredFile } from "../utils/sendStoredFile.js";
 import { normalizeManualPhones } from "../utils/normalization.js";
 import { refreshApplicationValidation } from "../services/documentService.js";
 
@@ -94,11 +95,28 @@ export async function reportStats(_request, response) {
 
 export async function datasetHistory(_request, response) {
   const items = await DatasetRecord.aggregate([
+    { $project: { "sourceFile.data": 0 } },
     { $sort: { createdAt: -1 } },
     { $group: { _id: "$importBatch", rowCount: { $sum: 1 }, importedAt: { $first: "$createdAt" }, importedBy: { $first: "$importedBy" } } },
     { $sort: { importedAt: -1 } }, { $limit: 20 },
   ]);
   response.json({ success: true, data: items });
+}
+
+export async function datasetBatchRecords(request, response) {
+  const records = await DatasetRecord.find({ importBatch: request.params.batch })
+    // Alt alanlar tek tek seçilir; "sourceFile" seçilirse gizli dosya içeriği (data) de gelir.
+    .select("studentNo name department academicYear email createdAt sourceFile.originalName sourceFile.mimeType sourceFile.size sourceFile.sha256 sourceFile.stored")
+    .sort({ studentNo: 1 });
+  if (!records.length) throw new AppError("Veri seti aktarımı bulunamadı.", 404);
+  response.json({ success: true, data: records });
+}
+
+export async function downloadDatasetRecordFile(request, response) {
+  const record = await DatasetRecord.findById(request.params.id).select("+sourceFile.data");
+  if (!record?.sourceFile?.data?.length) throw new AppError("Bu kayıt için saklanan belge bulunamadı.", 404);
+  await writeAudit(request, "DATASET_FILE_VIEWED", { entityType: "DatasetRecord", entityId: record._id, metadata: { fileName: record.sourceFile.originalName } });
+  sendStoredFile(request, response, record.sourceFile);
 }
 
 export async function deleteDatasetBatch(request, response) {

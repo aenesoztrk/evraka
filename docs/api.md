@@ -22,7 +22,7 @@ Kök adres `/api` olup korunan endpointlerde `Authorization: Bearer TOKEN` başl
 | POST | `/applications/:id/document` | Multipart `document` dosyasını okur ve karşılaştırır |
 | PATCH | `/applications/:id/schedule` | Tarih ve haftalık günleri hesaplar |
 | PUT | `/applications/:id/google-form` | Form URL ve entry eşlemesini kaydeder |
-| GET | `/applications/:id/document` | Orijinal belgeyi indirir |
+| GET | `/applications/:id/document` | Orijinal belgeyi indirir; `?inline=1` ile PDF/görsel tarayıcıda önizlenir. Sahibi olan öğrenci ve admin erişebilir, admin erişimi denetim günlüğüne yazılır |
 
 Belge yüklerken `stage=midterm` vize kapsamını, `stage=final` tüm doğrulamaları çalıştırır.
 
@@ -36,6 +36,8 @@ Belge yüklerken `stage=midterm` vize kapsamını, `stage=final` tüm doğrulama
 | GET | `/admin/applications/export.csv` | Başvuru listesini CSV olarak indirir |
 | POST | `/admin/dataset` | Test veri seti: `dataset` alanında 1–20 dosya (XLSX, CSV veya EK-16 PDF). Yanıtta her dosya için `files[]` analiz raporu döner |
 | GET | `/admin/datasets` | Veri seti aktarım geçmişi |
+| GET | `/admin/datasets/:batch/records` | Bir aktarımdaki öğrenci kayıtları ve kaynak dosya bilgisi (dosya içeriği hariç) |
+| GET | `/admin/dataset-records/:id/file` | Kaydın çıkarıldığı PDF. `?inline=1` ile tarayıcıda önizleme |
 | DELETE | `/admin/datasets/:batch` | Bir veri seti aktarımını siler |
 | PATCH | `/admin/applications/:id` | Başvuruyu günceller |
 | DELETE | `/admin/applications/:id` | Başvuruyu siler |

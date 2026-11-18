@@ -138,6 +138,14 @@ export async function importDataset(files, importedBy) {
           report.status = "skipped";
           report.message = `${record.studentNo} numaralı öğrenci bu yüklemede başka bir dosyadan zaten alındı.`;
         } else {
+          record.sourceFile = {
+            originalName: file.originalname,
+            mimeType: "application/pdf",
+            size: file.size ?? file.buffer.length,
+            sha256: crypto.createHash("sha256").update(file.buffer).digest("hex"),
+            stored: true,
+            data: file.buffer,
+          };
           records.set(record.studentNo, record);
           report.status = report.missingFields.length ? "partial" : "imported";
           report.message = report.missingFields.length ? `Eksik alanlar: ${report.missingFields.join(", ")}.` : "Tüm öğrenci alanları okundu.";
@@ -148,7 +156,11 @@ export async function importDataset(files, importedBy) {
         for (const row of rows) {
           if (!row.studentNo || !row.name) invalid += 1;
           else if (records.has(row.studentNo)) duplicate += 1;
-          else { records.set(row.studentNo, row); imported += 1; }
+          else {
+            row.sourceFile = { originalName: file.originalname, mimeType: file.mimetype, size: file.size ?? file.buffer.length, stored: false };
+            records.set(row.studentNo, row);
+            imported += 1;
+          }
         }
         Object.assign(report, { rowCount: imported, invalidRows: invalid, duplicateRows: duplicate });
         report.status = imported ? (invalid || duplicate ? "partial" : "imported") : "skipped";

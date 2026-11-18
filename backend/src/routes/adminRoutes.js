@@ -1,7 +1,7 @@
 import { Router } from "express";
 import {
   adminDeleteApplication, adminUpdateApplication, completeApplication, dashboardStats,
-  datasetHistory, deleteDatasetBatch, downloadEk17, exportApplications, listApplications, reportStats, uploadTestDataset,
+  datasetBatchRecords, datasetHistory, deleteDatasetBatch, downloadDatasetRecordFile, downloadEk17, exportApplications, listApplications, reportStats, uploadTestDataset,
 } from "../controllers/adminController.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { uploadDataset } from "../middleware/upload.js";
@@ -12,6 +12,8 @@ adminRouter.use(requireAuth, requireRole("admin"));
 adminRouter.get("/stats", asyncHandler(dashboardStats));
 adminRouter.get("/reports", asyncHandler(reportStats));
 adminRouter.get("/datasets", asyncHandler(datasetHistory));
+adminRouter.get("/datasets/:batch/records", asyncHandler(datasetBatchRecords));
+adminRouter.get("/dataset-records/:id/file", asyncHandler(downloadDatasetRecordFile));
 adminRouter.delete("/datasets/:batch", asyncHandler(deleteDatasetBatch));
 adminRouter.get("/applications/export.csv", asyncHandler(exportApplications));
 adminRouter.get("/applications", asyncHandler(listApplications));

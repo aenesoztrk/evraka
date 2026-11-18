@@ -195,8 +195,10 @@ function assignSection(result, sectionName, lines) {
   if (sectionName === "company" || sectionName === "employer") {
     const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0];
     const phone = text.match(/(?:\+?\d{1,3}|0)?[\s().-]*\d{3}[\s().-]*\d{3}[\s.-]*\d{2}[\s.-]*\d{2}/)?.[0];
-    if (email) setPath(result, `${sectionName}.email`, email);
-    if (phone) setPath(result, `${sectionName}.phone`, phone);
+    // Etiketin altındaki değer bulunduysa korunur; bölümdeki ilk e-posta/telefon benzeri metin
+    // (ör. kaşedeki vergi numarası) yalnızca alan boş kaldığında kullanılır.
+    if (email && !result[sectionName]?.email) setPath(result, `${sectionName}.email`, email);
+    if (phone && !result[sectionName]?.phone) setPath(result, `${sectionName}.phone`, phone);
   }
   if (sectionName === "company") {
     const dates = text.match(/\b(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]\d{4})\b/g) || [];
@@ -286,9 +288,59 @@ export function parseTableRows(rows) {
   return result;
 }
 
+// --- Yapışık etiketleri ayırma -------------------------------------------------
+// Bazı PDF'lerde (ör. Word'den dışa aktarılan EK-16) tablo hücreleri metne boşluksuz aktarılır:
+// "ADI SOYADIAhmet Yılmaz", "DOĞUM TARİHİ12.05.2002ÖĞRETİM YILI2025 - 2026".
+// Ayrıştırıcı etiketin kendi satırında olmasını beklediği için bilinen etiketler önce ayrı satırlara alınır.
+
+const turkishLetterClasses = { a: "aâAÂ", c: "cçCÇ", g: "gğGĞ", i: "iıİIîÎ", o: "oöOÖ", s: "sşSŞ", u: "uüûUÜÛ" };
+const labelSuffix = String.raw`(?:\s*\?)?(?:\s*\(\s*E\s*/\s*H\s*\))?(?:\s*-?\s*\(\s*\*+\s*\))?`;
+const labelPhrases = [
+  ...allSpecs.flatMap((spec) => spec.aliases),
+  "ogrencinin", "staj yapilan yerin", "isveren veya yetkilinin", ...extraBoundaries,
+];
+
+function labelPattern(phrase) {
+  return normalizeText(phrase).split(/[^a-z0-9]+/).filter(Boolean)
+    .map((word) => [...word].map((character) => (turkishLetterClasses[character] ? `[${turkishLetterClasses[character]}]` : character)).join(""))
+    .join(String.raw`[\s./-]*`);
+}
+
+const labelRegex = new RegExp(
+  `(?:${[...new Set(labelPhrases)].sort((first, second) => second.length - first.length).map(labelPattern).join("|")})${labelSuffix}`,
+  "giu",
+);
+
+const isLetter = (character) => Boolean(character) && character.toLocaleLowerCase("tr") !== character.toLocaleUpperCase("tr");
+const isUpper = (character) => isLetter(character) && character === character.toLocaleUpperCase("tr");
+const isLower = (character) => isLetter(character) && character === character.toLocaleLowerCase("tr");
+
+function isGluedLabel(text, offset, label) {
+  // Etiket büyük harfle başlamalı ve bir kelimenin ortasında olmamalı ("Kadıköy" içindeki "adı" gibi).
+  if (!isUpper(label[0])) return false;
+  if (isUpper(text[offset - 1])) return false;
+  const next = text[offset + label.length];
+  const afterNext = text[offset + label.length + 1];
+  const lastLetter = label.at(-1);
+  if (isLower(next)) {
+    // "Adresiik@firma.com", "Web Adresiwww.firma.com" gibi küçük harfle başlayan değerler.
+    const token = text.slice(offset + label.length).split(/\s/)[0];
+    return token.includes("@") || /^(?:www\.|https?:)/i.test(token);
+  }
+  // "ADIYAMAN" içindeki "ADI" ayrılmaz; "SOYADIAhmet" ayrılır.
+  if (isUpper(lastLetter) && isUpper(next) && isUpper(afterNext)) return false;
+  return true;
+}
+
+export function splitGluedLabels(text) {
+  return String(text ?? "").replace(labelRegex, (label, offset, source) => (
+    isGluedLabel(source, offset, label) ? `\n${label.replace(/\s+/g, " ").trim()}\n` : label
+  ));
+}
+
 export function parsePlainText(text) {
   const result = {};
-  const sections = splitSections(text);
+  const sections = splitSections(splitGluedLabels(text));
   assignSection(result, "student", sections.student);
   assignSection(result, "company", sections.company);
   assignSection(result, "employer", sections.employer);

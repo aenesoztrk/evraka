@@ -36,7 +36,7 @@ function midtermReport(extractionMeta = {}) {
   const message = extractionMeta.requiresOcr
     ? "Dosya biçimi, uzantısı, boyutu ve gerçek dosya imzası uygun. OCR final aşamasında çalıştırılacaktır."
     : "Dosya biçimi, uzantısı, boyutu ve gerçek dosya imzası uygun.";
-  return [{ code: "MIDTERM_FILE", title: "Vize dosya kontrolü", status: "success", message }];
+  return [{ code: "MIDTERM_FILE", title: "Dosya kontrolü", status: "success", message }];
 }
 
 export function documentProcessingPlan(stage, mimeType) {
@@ -75,9 +75,12 @@ function mergeDeep(target, source) {
 export async function refreshApplicationValidation(application) {
   application.comparisonReport = compareManualAndExtracted(application.manualData, application.extractedData || {});
   if (application.stage === "final") {
-    const studentNo = getPath(application.manualData, "student.studentNo");
-    const datasetRecord = studentNo ? await DatasetRecord.findOne({ studentNo }).sort({ createdAt: -1 }) : null;
     const currentUser = await User.findById(application.student).select("+identityNo");
+    // Manuel form henüz doldurulmadıysa belgeden okunan, o da yoksa hesaptaki öğrenci numarasıyla aranır.
+    const studentNo = getPath(application.manualData, "student.studentNo")
+      || getPath(application.extractedData, "student.studentNo")
+      || currentUser?.studentNo;
+    const datasetRecord = studentNo ? await DatasetRecord.findOne({ studentNo: String(studentNo).trim() }).sort({ createdAt: -1 }) : null;
     const contextData = mergeDeep(application.extractedData, application.manualData);
     application.validationReport = validatorEngine.run({ data: contextData, application, extractionMeta: application.extractionMeta || {}, datasetRecord, currentUser });
     const blockingComparison = application.comparisonReport.some((item) => ["mismatch", "missing-document", "missing-manual"].includes(item.status));

@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { normalizeRecord, recordFromExtraction } from "../src/services/datasetService.js";
-import { parsePlainText } from "../src/domain/readers/fieldParser.js";
+import { parsePlainText, splitGluedLabels } from "../src/domain/readers/fieldParser.js";
+import { decodeFileName } from "../src/middleware/upload.js";
 
 const ek16Text = `
 ÖĞRENCİNİN
@@ -57,4 +58,49 @@ test("boş çıkarım sonucunda zorunlu alanlar boş kalır", () => {
 test("geçersiz tarih kaydı bozmaz, yerel tarih biçimi çözülür", () => {
   assert.equal(normalizeRecord({ birthDate: "okunamadı" }).birthDate, undefined);
   assert.equal(normalizeRecord({ birthDate: "14.02.2003" }).birthDate.toISOString().slice(0, 10), "2003-02-14");
+});
+
+test("hücreleri yapışık aktarılan PDF metninden öğrenci kaydı çıkarır", () => {
+  const glued = [
+    "Bilgisayar Mühendisliği Bölümünde öğrenim gören öğrencimizin",
+    "ÖĞRENCİNİN",
+    "T.C. KİMLİK NO / UYRUĞU12345678901 / T.C.BÖLÜMÜBilgisayar Mühendisliği",
+    "ADI SOYADIAhmet Yılmaz",
+    "DAHA ÖNCE YAPTIĞI STAJ", "GÜN SAYISI", "0",
+    "DOĞUM TARİHİ12.05.2002ÖĞRETİM YILI2025 - 2026",
+    "ÖĞRENCİ NUMARASI210405022",
+    "E-POSTA ADRESİ /", "TELEFON NO", "ahmet.yilmaz@ogrenci.edu.tr", "0555 123 45 67",
+    "İKAMETGÂH ADRESİKadıköy / İstanbul",
+    "SAĞLIK YARDIM STATÜSÜ (*)", "1- ☒    2- ☐",
+    "STAJ YAPILAN YERİN",
+    "AdıTekno Çözümler A.Ş.Yurtdışı Stajı mı? (E / H)H",
+    "E-Posta Adresiik@tekno.com",
+    "İŞVEREN VEYA YETKİLİNİN",
+    "Adı SoyadıMehmet Demirİmza / Kaşe",
+    "Maslak V.D. 1234567890",
+    "Telefon No0532 999 88 77",
+  ].join("\n");
+  const data = parsePlainText(glued);
+  const record = recordFromExtraction(data);
+  assert.equal(record.name, "Ahmet Yılmaz");
+  assert.equal(record.studentNo, "210405022");
+  assert.equal(record.identityNo, "12345678901");
+  assert.equal(record.department, "Bilgisayar Mühendisliği");
+  assert.equal(record.address, "Kadıköy / İstanbul");
+  assert.equal(record.academicYear, "2025 - 2026");
+  assert.equal(data.company.name, "Tekno Çözümler A.Ş.");
+  assert.equal(data.company.abroad, false);
+  assert.equal(data.company.email, "ik@tekno.com");
+  assert.equal(data.employer.name, "Mehmet Demir");
+  assert.equal(data.employer.phone, "0532 999 88 77");
+});
+
+test("kelime içindeki etiket benzeri metinleri bölmez", () => {
+  assert.equal(splitGluedLabels("Kadıköy Adıyaman Bölümünde"), "Kadıköy Adıyaman Bölümünde");
+});
+
+test("multer'ın bozduğu Türkçe dosya adını düzeltir", () => {
+  const broken = Buffer.from("EK-16 Staj Başvuru Formu.pdf".normalize("NFD"), "utf8").toString("latin1");
+  assert.equal(decodeFileName(broken), "EK-16 Staj Başvuru Formu.pdf");
+  assert.equal(decodeFileName("students.csv"), "students.csv");
 });

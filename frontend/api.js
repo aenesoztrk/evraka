@@ -66,6 +66,9 @@
     adminReports: () => request("/admin/reports"),
     datasetHistory: () => request("/admin/datasets"),
     deleteDatasetBatch: (batch) => request(`/admin/datasets/${encodeURIComponent(batch)}`, { method: "DELETE" }),
+    datasetRecords: (batch) => request(`/admin/datasets/${encodeURIComponent(batch)}/records`),
+    datasetRecordFile: (id, inline = true) => request(`/admin/dataset-records/${encodeURIComponent(id)}/file${inline ? "?inline=1" : ""}`),
+    applicationDocument: (id, inline = true) => request(`/applications/${encodeURIComponent(id)}/document${inline ? "?inline=1" : ""}`),
     adminApplications: (query = "") => request(`/admin/applications${query ? `?${query}` : ""}`),
     uploadDataset: (files) => {
       const form = new FormData();

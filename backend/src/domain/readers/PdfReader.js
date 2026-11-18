@@ -5,6 +5,7 @@ import { BaseDocumentReader } from "./BaseDocumentReader.js";
 import { parsePlainText } from "./fieldParser.js";
 import { analyzeApprovalRegions, mergeApprovalMeta } from "./ImageOcrReader.js";
 import { createOcrWorker } from "../../utils/ocr.js";
+import { locateApprovalLayouts } from "./approvalLayout.js";
 
 export class PdfReader extends BaseDocumentReader {
   async read(file, { allowOcr = true, analyzeApprovals = true } = {}) {
@@ -24,6 +25,7 @@ export class PdfReader extends BaseDocumentReader {
       meta: { method: "pdf-text", pages: parsed.numpages, processedPages: parsed.numpages, info: parsed.info, approvalAnalysisAvailable: false },
     };
 
+    const layouts = !needsOcr && analyzeApprovals ? await locateApprovalLayouts(file.buffer).catch(() => []) : [];
     const document = await pdf(`data:application/pdf;base64,${file.buffer.toString("base64")}`, { scale: 2 });
     const worker = needsOcr ? await createOcrWorker() : null;
     const texts = [];
@@ -45,7 +47,7 @@ export class PdfReader extends BaseDocumentReader {
           texts.push(result.data.text);
           confidences.push(result.data.confidence);
         }
-        if (analyzeApprovals) approvalItems.push(await analyzeApprovalRegions(analysisImage, { continuationPage: processedPages > 1 }));
+        if (analyzeApprovals) approvalItems.push(await analyzeApprovalRegions(analysisImage, { continuationPage: processedPages > 1, layout: layouts[processedPages - 1] }));
       }
     } finally {
       if (worker) await worker.terminate();

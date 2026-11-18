@@ -78,11 +78,14 @@ export class AddressRule extends ValidationRule {
     const errors = [];
     for (const [path, label, apartmentRequired] of [["student.address", "İkametgâh", true], ["company.address", "Kurum", false]]) {
       const address = normalizeText(fullAddress(getPath(data, path)));
-      const hasStreet = address.includes("sok") || address.includes("cad");
+      // Bulvar, asfalt, yol ve meydan da cadde/sokak yerine geçen yol türleridir.
+      const hasStreet = /sok|cad|\bcd\b|\bsk\b|bulvar|\bblv\b|\bbulv\b|asfalt|\byolu?\b|meydan/.test(address);
+      // Organize sanayi bölgeleri ve sanayi siteleri mahalle yerine geçer.
+      const hasNeighborhood = address.includes("mah") || /\bosb\b|organize sanayi|sanayi sitesi/.test(address);
       const hasBuilding = /(?:bina\s*)?no\s*\d+/i.test(address);
       const hasApartment = /daire\s*(?:no\s*)?\d+/i.test(address);
       const hasLocation = /[a-z]{3,}\s*\/\s*[a-z]{3,}/i.test(address) || address.split(" ").length >= 8;
-      if (!(address.includes("mah") && hasStreet && hasBuilding && (!apartmentRequired || hasApartment) && hasLocation)) errors.push(`${label} adresi Mahalle, Cadde/Sokak, Bina No${apartmentRequired ? ", Daire No" : ""}, İlçe/İl bilgilerini tam içermelidir.`);
+      if (!(hasNeighborhood && hasStreet && hasBuilding && (!apartmentRequired || hasApartment) && hasLocation)) errors.push(`${label} adresi Mahalle, Cadde/Sokak, Bina No${apartmentRequired ? ", Daire No" : ""}, İlçe/İl bilgilerini tam içermelidir.`);
     }
     return errors.length ? this.result("error", errors.join(" "), "student.address") : this.result("success", "Öğrenci ve kurum adresleri gerekli bileşenleri içeriyor.");
   }

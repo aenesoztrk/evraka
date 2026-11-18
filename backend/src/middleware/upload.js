@@ -20,11 +20,19 @@ const datasetMimeTypes = new Set([
 
 export const maxDatasetFiles = 20;
 
+// Multer dosya adını latin1 olarak çözer; Türkçe karakterler "BasÌ§vuru" gibi bozulur.
+export function decodeFileName(name) {
+  const value = String(name ?? "");
+  const decoded = Buffer.from(value, "latin1").toString("utf8");
+  return (decoded.includes("�") ? value : decoded).normalize("NFC");
+}
+
 function createUpload(mimeTypes, maxMb, maxFiles = 1) {
   return multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: maxMb * 1024 * 1024, files: maxFiles },
     fileFilter(_request, file, callback) {
+      file.originalname = decodeFileName(file.originalname);
       if (!mimeTypes.has(file.mimetype)) return callback(new AppError("Desteklenmeyen dosya türü.", 400));
       callback(null, true);
     },

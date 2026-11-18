@@ -4,6 +4,7 @@ import { inspectGoogleForm, validateGoogleFormUrl } from "../services/googleForm
 import { calculateInternshipDays } from "../utils/date.js";
 import { AppError } from "../utils/AppError.js";
 import { writeAudit } from "../utils/audit.js";
+import { sendStoredFile } from "../utils/sendStoredFile.js";
 import { normalizeManualPhones } from "../utils/normalization.js";
 
 async function findOwnedApplication(applicationId, user, includeDocument = false) {
@@ -103,7 +104,8 @@ export async function saveGoogleForm(request, response) {
 export async function downloadDocument(request, response) {
   const application = await findOwnedApplication(request.params.id, request.user, true);
   if (!application.document?.data) throw new AppError("Başvuruda belge bulunamadı.", 404);
-  response.setHeader("Content-Type", application.document.mimeType || "application/octet-stream");
-  response.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(application.document.originalName)}`);
-  response.send(application.document.data);
+  if (request.user.role === "admin") {
+    await writeAudit(request, "DOCUMENT_VIEWED", { entityType: "Application", entityId: application._id, metadata: { fileName: application.document.originalName } });
+  }
+  sendStoredFile(request, response, application.document);
 }

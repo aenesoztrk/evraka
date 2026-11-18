@@ -9,6 +9,7 @@ const state = {
   ek17ApplicationId: null,
   datasetImport: null,
   datasetUploading: false,
+  datasetRecords: null,
 };
 
 const userProfiles = {
@@ -256,20 +257,46 @@ const reportTemplate = () => {
   const validation = application?.validationReport || [];
   const comparison = application?.comparisonReport || [];
   const combined = [
-    ...validation.map(item => ({ title: item.title, message: item.message, status: item.status })),
+    // Eski kayıtlarda saklanan "Vize dosya kontrolü" başlığı da sade adıyla gösterilir.
+    ...validation.map(item => ({ title: item.code === "MIDTERM_FILE" ? "Dosya kontrolü" : item.title, message: item.message, status: item.status })),
     ...comparison.filter(item => item.status !== "match" && item.status !== "missing-both").map(item => ({ title: `${item.label} karşılaştırması`, message: `Form: ${item.manual || "boş"} · Belge: ${item.extracted || "boş"}`, status: isFinal && item.status === "mismatch" ? "error" : "warning" })),
   ];
-  const success = validation.filter(item => item.status === "success").length + (isFinal ? comparison.filter(item => item.status === "match").length : 0);
+  // Skor tüm kontrollerden hesaplanır: kurallar + form/belge alan karşılaştırmaları.
+  const success = validation.filter(item => item.status === "success").length + comparison.filter(item => item.status === "match").length;
   const warning = combined.filter(item => item.status === "warning").length;
   const error = combined.filter(item => item.status === "error").length;
-  const total = Math.max(1, validation.length + (isFinal ? comparison.filter(item => item.status !== "missing-both").length : 0));
-  const score = application ? Math.round((success / total) * 100) : 0;
+  const total = success + warning + error;
+  const analyzed = Boolean(application?.document?.originalName) && total > 0;
+  const score = analyzed ? Math.round((success / total) * 100) : null;
+  const scoreTone = score === null ? "empty" : score >= 80 ? "good" : score >= 50 ? "mid" : "low";
+  const scoreCaption = analyzed ? `${total} kontrolün ${success} tanesi başarılı.` : "Belge yüklendiğinde skor hesaplanır.";
   const rows = combined.length ? combined : [{ title: "Henüz analiz yapılmadı", message: "Önce bilgi formunu kaydet ve Ek-16 belgesini yükle.", status: "warning" }];
   return `
-  <div class="dashboard-page-head"><div><h2>Kontrol raporu</h2><p>${escapeHtml(application?.document?.originalName || "Belge yüklenmedi")} · ${application?.stage === "final" ? "Final doğrulamaları" : "Vize alan karşılaştırması"}</p></div><div class="page-head-actions"><button class="dash-secondary" data-nav="manual">Bilgileri düzenle</button><button class="dash-primary" data-open-upload>⇧ ${application?.document ? "Yeniden yükle" : "Belge yükle"}</button></div></div>
-  <article class="panel-card"><div class="validation-summary"><div class="score-large"><span><strong>${score}</strong><small>%</small></span></div><div><div class="panel-card-head"><div><h3>${isFinal ? "Belge hazırlık skoru" : "Vize dosya uygunluğu"}</h3><p>${isFinal ? (application?.readiness ? "Belge teslime hazır." : "Eksik ve uyuşmayan alanları düzelttikten sonra yeniden analiz et.") : "Vizede dosya kontrolleri sonucu belirler; alan farkları bilgi amaçlı raporlanır."}</p></div></div><div class="summary-counts"><div class="summary-count ok"><b>${success}</b><span>Başarılı</span></div><div class="summary-count warn"><b>${warning}</b><span>Uyarı</span></div><div class="summary-count error"><b>${error}</b><span>Hata</span></div></div></div></div></article>
-  <article class="panel-card" style="margin-top:18px"><div class="panel-card-head"><div><h3>Kontrol sonuçları</h3><p>Manuel bilgiler, belge alanları ve doğrulama kuralları</p></div><span class="status-badge ${application?.readiness ? "complete" : "error"}">${application?.readiness ? (isFinal ? "Teslime hazır" : "Vize dosyası uygun") : "Düzeltme gerekli"}</span></div><div class="results-list">${rows.map(item => { const css = item.status === "success" ? "ok" : item.status === "warning" ? "warn" : "error"; return `<div class="result-row ${css}"><i>${css === "ok" ? "✓" : "!"}</i><div><b>${escapeHtml(item.title)}</b><span>${escapeHtml(item.message)}</span></div><em>${css === "ok" ? "Başarılı" : css === "warn" ? "Bilgi" : "Düzelt"}</em></div>`; }).join("")}</div></article>`;
+  <div class="dashboard-page-head"><div><h2>Kontrol raporu</h2><p>${escapeHtml(application?.document?.originalName || "Belge yüklenmedi")} · ${isFinal ? "Final doğrulamaları" : "Dosya kontrolü ve alan karşılaştırması"}</p></div><div class="page-head-actions">${application?.document?.originalName ? `<button class="dash-secondary" data-view-document="${escapeHtml(application._id)}">▤ Belgeyi görüntüle</button>` : ""}<button class="dash-secondary" data-nav="manual">Bilgileri düzenle</button><button class="dash-primary" data-open-upload>⇧ ${application?.document ? "Yeniden yükle" : "Belge yükle"}</button></div></div>
+  <article class="panel-card"><div class="validation-summary"><div class="score-large ${scoreTone}" style="--score:${score ?? 0}%" role="img" aria-label="${score === null ? "Skor henüz hesaplanmadı" : `Skor yüzde ${score}`}"><span><strong>${score ?? "—"}</strong>${score === null ? "" : "<small>%</small>"}</span></div><div><div class="panel-card-head"><div><h3>${isFinal ? "Belge hazırlık skoru" : "Dosya uygunluğu"}</h3><p>${escapeHtml(scoreCaption)} ${isFinal ? (application?.readiness ? "Belge teslime hazır." : "Eksik ve uyuşmayan alanları düzelttikten sonra yeniden analiz et.") : "Dosya kontrolleri sonucu belirler; alan farkları bilgi amaçlı raporlanır."}</p></div></div><div class="summary-counts"><div class="summary-count ok"><b>${success}</b><span>Başarılı</span></div><div class="summary-count warn"><b>${warning}</b><span>Uyarı</span></div><div class="summary-count error"><b>${error}</b><span>Hata</span></div></div></div></div></article>
+  <article class="panel-card" style="margin-top:18px"><div class="panel-card-head"><div><h3>Kontrol sonuçları</h3><p>Manuel bilgiler, belge alanları ve doğrulama kuralları</p></div><span class="status-badge ${application?.readiness ? "complete" : "error"}">${application?.readiness ? (isFinal ? "Teslime hazır" : "Dosya uygun") : "Düzeltme gerekli"}</span></div><div class="results-list">${rows.map(item => { const css = item.status === "success" ? "ok" : item.status === "warning" ? "warn" : "error"; return `<div class="result-row ${css}"><i>${css === "ok" ? "✓" : "!"}</i><div><b>${escapeHtml(item.title)}</b><span>${escapeHtml(item.message)}</span></div><em>${css === "ok" ? "Başarılı" : css === "warn" ? "Bilgi" : "Düzelt"}</em></div>`; }).join("")}</div></article>
+  ${uploadedDocumentCardTemplate(application)}`;
 };
+
+function formatFileSize(bytes) {
+  if (!bytes) return "—";
+  return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+function uploadedDocumentCardTemplate(application) {
+  const file = application?.document;
+  if (!file?.originalName) return "";
+  const meta = application.extractionMeta || {};
+  const methods = { "pdf-text": "PDF metni", "pdf-text-visual-approval": "PDF metni + görsel onay analizi", "pdf-tesseract-ocr": "PDF OCR", "tesseract-ocr": "Görsel OCR", "docx-parser": "Word belgesi", "legacy-doc-parser": "Eski Word belgesi" };
+  const details = [
+    ["Dosya", file.originalName],
+    ["Tür / boyut", `${file.mimeType || "—"} · ${formatFileSize(file.size)}`],
+    ["Yüklenme", application.updatedAt ? new Date(application.updatedAt).toLocaleString("tr-TR") : "—"],
+    ["Okuma yöntemi", `${methods[meta.method] || meta.method || "—"}${Number.isFinite(meta.confidence) ? ` · OCR güveni %${Math.round(meta.confidence)}` : ""}`],
+    ["SHA-256", file.sha256 ? `${file.sha256.slice(0, 16)}…` : "—"],
+  ];
+  return `<article class="panel-card" style="margin-top:18px"><div class="panel-card-head"><div><h3>Yüklenen belge</h3><p>Sisteme yüklenen orijinal dosya</p></div><div class="page-head-actions"><button class="dash-secondary" data-download-document="${escapeHtml(application._id)}">↓ İndir</button><button class="dash-primary" data-view-document="${escapeHtml(application._id)}">▤ Görüntüle</button></div></div><div class="info-list">${details.map(([label, value]) => `<div class="info-item"><i>•</i><div><b>${escapeHtml(label)}</b><span>${escapeHtml(value)}</span></div></div>`).join("")}</div></article>`;
+}
 
 const scheduleTemplate = () => {
   const application = state.application;
@@ -392,13 +419,28 @@ function datasetImportResultTemplate() {
     ].filter(Boolean).join(" · ");
     return `<div class="activity-item"><i class="${view.className}">${view.icon}</i><div><b>${escapeHtml(file.fileName)}</b><span>${escapeHtml(view.label)}${detail ? ` · ${escapeHtml(detail)}` : ""}</span></div></div>`;
   }).join("");
-  return `<div class="dataset-result"><div class="panel-card-head"><div><h3>Son yükleme analizi</h3><p>${escapeHtml(summary)} · ${result.files.length} dosya incelendi</p></div></div><div class="activity-list">${items}</div></div>`;
+  const recordsButton = result.importBatch ? `<button class="row-action-text neutral" data-dataset-records="${escapeHtml(result.importBatch)}">Kayıtları ve belgeleri göster</button>` : "";
+  return `<div class="dataset-result"><div class="panel-card-head"><div><h3>Son yükleme analizi</h3><p>${escapeHtml(summary)} · ${result.files.length} dosya incelendi</p></div>${recordsButton}</div><div class="activity-list">${items}</div></div>`;
+}
+
+function datasetRecordsTemplate() {
+  const batch = state.datasetRecords;
+  if (!batch) return "";
+  const body = batch.loading
+    ? `<div class="locked-note"><span>…</span> Kayıtlar getiriliyor.</div>`
+    : batch.items.map(record => {
+      const file = record.sourceFile || {};
+      const source = file.originalName ? `${file.originalName}${file.size ? ` · ${formatFileSize(file.size)}` : ""}` : "Kaynak dosya bilgisi yok";
+      const action = file.stored ? `<button class="row-action-text neutral" data-view-dataset-file="${escapeHtml(record._id)}">▤ Belgeyi görüntüle</button>` : "";
+      return `<div class="activity-item"><i>${file.stored ? "▤" : "≡"}</i><div><b>${escapeHtml(record.name || "İsimsiz")} · ${escapeHtml(record.studentNo || "—")}</b><span>${escapeHtml([record.department, record.academicYear].filter(Boolean).join(" · ") || "—")} · ${escapeHtml(source)}</span></div>${action}</div>`;
+    }).join("") || `<div class="locked-note"><span>i</span> Bu aktarımda kayıt yok.</div>`;
+  return `<article class="panel-card" style="margin-top:18px" id="dataset-records"><div class="panel-card-head"><div><h3>Aktarım kayıtları</h3><p>${escapeHtml(batch.batch)}${batch.items ? ` · ${batch.items.length} öğrenci` : ""}</p></div><button class="row-action-text neutral" data-close-dataset-records>Kapat</button></div><div class="activity-list">${body}</div></article>`;
 }
 
 const datasetTemplate = () => `
   <div class="dashboard-page-head"><div><h2>Test veri seti</h2><p>Öğrenci kayıtlarını sisteme aktarmak için Excel/CSV dosyası veya toplu EK-16 PDF'leri yükle.</p></div><div class="page-head-actions"><a class="dash-secondary" href="../sample-data/students.csv" download>↓ Örnek şablon</a></div></div>
   <div class="dashboard-grid">
-    <article class="panel-card"><div class="panel-card-head"><div><h3>Veri seti yükle</h3><p>.xlsx, .csv veya .pdf · tek seferde en fazla 20 dosya · dosya başına en fazla 10 MB</p></div></div><div class="dataset-drop${state.datasetUploading ? " busy" : ""}"><div><div class="dataset-icon">${state.datasetUploading ? "…" : "⇧"}</div><h3>${state.datasetUploading ? "Dosyalar analiz ediliyor" : "Öğrenci veri dosyalarını seç"}</h3><p>${state.datasetUploading ? "Taranmış PDF'lerde OCR çalıştığı için bu işlem birkaç dakika sürebilir." : "Dosyaları buraya sürükle veya bilgisayarından seç. Birden fazla PDF seçebilirsin."}</p><input id="dataset-input" type="file" accept=".xlsx,.csv,.pdf" multiple hidden><button data-dataset-upload${state.datasetUploading ? " disabled" : ""}>${state.datasetUploading ? "Analiz ediliyor…" : "Dosya seç"}</button></div></div>${datasetImportResultTemplate()}</article>
+    <div><article class="panel-card"><div class="panel-card-head"><div><h3>Veri seti yükle</h3><p>.xlsx, .csv veya .pdf · tek seferde en fazla 20 dosya · dosya başına en fazla 10 MB</p></div></div><div class="dataset-drop${state.datasetUploading ? " busy" : ""}"><div><div class="dataset-icon">${state.datasetUploading ? "…" : "⇧"}</div><h3>${state.datasetUploading ? "Dosyalar analiz ediliyor" : "Öğrenci veri dosyalarını seç"}</h3><p>${state.datasetUploading ? "Taranmış PDF'lerde OCR çalıştığı için bu işlem birkaç dakika sürebilir." : "Dosyaları buraya sürükle veya bilgisayarından seç. Birden fazla PDF seçebilirsin."}</p><input id="dataset-input" type="file" accept=".xlsx,.csv,.pdf" multiple hidden><button data-dataset-upload${state.datasetUploading ? " disabled" : ""}>${state.datasetUploading ? "Analiz ediliyor…" : "Dosya seç"}</button></div></div>${datasetImportResultTemplate()}</article>${datasetRecordsTemplate()}</div>
     <div><article class="panel-card"><div class="panel-card-head"><div><h3>Aktarım geçmişi</h3><p>Son 20 veri seti yüklemesi</p></div></div><div class="activity-list" id="dataset-history"><div class="activity-item"><i>…</i><div><b>Yükleniyor</b><span>Aktarım kayıtları getiriliyor.</span></div></div></div></article><article class="panel-card" style="margin-top:18px"><div class="panel-card-head"><div><h3>Zorunlu sütunlar</h3><p>Dosyada bulunması gereken alanlar</p></div></div><div class="info-list"><div class="info-item"><i>1</i><div><b>Kimlik</b><span>Ad soyad, kimlik no, uyruk, öğrenci no, doğum tarihi.</span></div></div><div class="info-item"><i>2</i><div><b>Akademik bilgi</b><span>Bölüm, teslim yılı ve önceki staj gün sayısı.</span></div></div><div class="info-item"><i>3</i><div><b>İletişim</b><span>Adres, e-posta, telefon ve sağlık yardımı statüsü.</span></div></div><div class="info-item"><i>4</i><div><b>PDF yüklemesi</b><span>Her PDF bir öğrencinin EK-16 formu olmalı. Öğrenci no ve ad soyad okunamayan dosyalar atlanır; eksik alanlar raporda gösterilir.</span></div></div></div></article></div>
   </div>`;
 
@@ -496,7 +538,7 @@ async function hydrateDashboardPage(page) {
     }
     if (state.role === "admin" && page === "dataset") {
       const response = await window.EvraqaApi.datasetHistory();
-      document.querySelector("#dataset-history").innerHTML = response.data.map(item => `<div class="activity-item"><i>✓</i><div><b>${item.rowCount} öğrenci kaydı</b><span>${new Date(item.importedAt).toLocaleString("tr-TR")} · ${escapeHtml(item._id)}</span></div><button class="row-action-text" data-delete-dataset="${escapeHtml(item._id)}">Sil</button></div>`).join("") || `<div class="locked-note"><span>i</span> Henüz veri seti aktarılmadı.</div>`;
+      document.querySelector("#dataset-history").innerHTML = response.data.map(item => `<div class="activity-item"><i>✓</i><div><b>${item.rowCount} öğrenci kaydı</b><span>${new Date(item.importedAt).toLocaleString("tr-TR")} · ${escapeHtml(item._id)}</span></div><div class="row-actions"><button class="row-action-text neutral" data-dataset-records="${escapeHtml(item._id)}">Kayıtlar</button><button class="row-action-text" data-delete-dataset="${escapeHtml(item._id)}">Sil</button></div></div>`).join("") || `<div class="locked-note"><span>i</span> Henüz veri seti aktarılmadı.</div>`;
     }
     if (state.role === "admin" && page === "ek17") {
       const response = await window.EvraqaApi.adminApplications("status=completed&limit=100");
@@ -530,7 +572,7 @@ function adminApplicationRow(application) {
   const initials = name.split(/\s+/).slice(0,2).map(part => part[0]).join("").toUpperCase();
   const classes = { completed: "complete", reviewing: "review", error: "error", uploaded: "uploaded", approved: "complete", draft: "uploaded" };
   const labels = { completed: "Tamamlandı", reviewing: "İnceleniyor", error: "Eksik", uploaded: "Yüklendi", approved: "Onaylandı", draft: "Taslak" };
-  return `<tr><td><div class="student-cell"><i>${escapeHtml(initials)}</i><div><b>${escapeHtml(name)}</b><span>${escapeHtml(no)}</span></div></div></td><td>${escapeHtml(application.manualData?.student?.department || student.department || "—")}</td><td>${new Date(application.createdAt).toLocaleDateString("tr-TR")}</td><td><span class="status-badge ${classes[application.status] || "uploaded"}">${labels[application.status] || application.status}</span></td><td><div class="row-actions"><button data-admin-open="${application._id}" title="İncele">⌕</button>${application.status === "completed" ? `<button data-download-ek17="${application._id}" title="Ek-17 indir">＋</button>` : `<button data-complete="${application._id}" title="Tamamla">✓</button>`}<button data-delete-application="${application._id}" title="Sil">×</button></div></td></tr>`;
+  return `<tr><td><div class="student-cell"><i>${escapeHtml(initials)}</i><div><b>${escapeHtml(name)}</b><span>${escapeHtml(no)}</span></div></div></td><td>${escapeHtml(application.manualData?.student?.department || student.department || "—")}</td><td>${new Date(application.createdAt).toLocaleDateString("tr-TR")}</td><td><span class="status-badge ${classes[application.status] || "uploaded"}">${labels[application.status] || application.status}</span></td><td><div class="row-actions"><button data-admin-open="${application._id}" title="İncele">⌕</button>${application.document?.originalName ? `<button data-view-document="${application._id}" title="Belgeyi görüntüle">▤</button>` : ""}${application.status === "completed" ? `<button data-download-ek17="${application._id}" title="Ek-17 indir">＋</button>` : `<button data-complete="${application._id}" title="Tamamla">✓</button>`}<button data-delete-application="${application._id}" title="Sil">×</button></div></td></tr>`;
 }
 
 function openLogin(role = "student") {
@@ -646,7 +688,7 @@ async function analyzeSelectedFile() {
     closeUpload();
     resetUploadModal();
     renderDashboardPage("report");
-    const successMessage = stage === "final" ? "Analiz tamamlandı: belge teslime hazır." : "Vize dosya kontrolleri başarıyla tamamlandı.";
+    const successMessage = stage === "final" ? "Analiz tamamlandı: belge teslime hazır." : "Dosya kontrolleri başarıyla tamamlandı.";
     showToast(state.application.readiness ? successMessage : "Analiz tamamlandı: düzeltilmesi gereken alanlar var.", state.application.readiness ? "✓" : "!");
   } catch (error) {
     resetUploadModal();
@@ -784,6 +826,101 @@ async function generateFirstEk17() {
   } catch (error) { showToast(error.message, "!"); }
 }
 
+let documentPreviewUrl = null;
+
+function closeDocumentPreview() {
+  document.querySelector("#doc-preview")?.remove();
+  if (documentPreviewUrl) {
+    const url = documentPreviewUrl;
+    documentPreviewUrl = null;
+    // Yeni sekmede açılan önizleme yüklenebilsin diye adres hemen geçersiz kılınmaz.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+}
+
+function saveBlob(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName || "belge";
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function openDocumentPreview({ title, subtitle = "", fileName, load }) {
+  closeDocumentPreview();
+  const modal = document.createElement("div");
+  modal.className = "modal-backdrop";
+  modal.id = "doc-preview";
+  modal.innerHTML = `<div class="doc-preview" role="dialog" aria-modal="true" aria-label="Belge önizleme"><div class="doc-preview-head"><div><b>${escapeHtml(title)}</b><span>${escapeHtml(subtitle)}</span></div><div class="doc-preview-actions"><button class="dash-secondary" data-doc-download disabled>↓ İndir</button><button class="dash-secondary" data-doc-newtab disabled>Yeni sekmede aç</button><button class="modal-close" data-doc-close aria-label="Önizlemeyi kapat">×</button></div></div><div class="doc-preview-body"><div class="doc-preview-status">Belge yükleniyor…</div></div></div>`;
+  document.body.appendChild(modal);
+  try {
+    const blob = await load();
+    if (!modal.isConnected) return;
+    documentPreviewUrl = URL.createObjectURL(blob);
+    const body = modal.querySelector(".doc-preview-body");
+    if (blob.type === "application/pdf") body.innerHTML = `<iframe title="${escapeHtml(title)}" src="${documentPreviewUrl}"></iframe>`;
+    else if (blob.type.startsWith("image/")) body.innerHTML = `<img alt="${escapeHtml(title)}" src="${documentPreviewUrl}">`;
+    else body.innerHTML = `<div class="doc-preview-status">Bu dosya türü (${escapeHtml(blob.type || "bilinmiyor")}) tarayıcıda önizlenemiyor. İndirerek açabilirsin.</div>`;
+    modal.querySelector("[data-doc-download]").disabled = false;
+    modal.querySelector("[data-doc-newtab]").disabled = !(blob.type === "application/pdf" || blob.type.startsWith("image/"));
+    modal.querySelector("[data-doc-download]").onclick = () => saveBlob(blob, fileName || title);
+    modal.querySelector("[data-doc-newtab]").onclick = () => window.open(documentPreviewUrl, "_blank", "noopener");
+  } catch (error) {
+    if (modal.isConnected) modal.querySelector(".doc-preview-body").innerHTML = `<div class="doc-preview-status">! ${escapeHtml(error.message)}</div>`;
+  }
+}
+
+function findApplicationForDocument(id) {
+  return [state.application, ...state.adminApplications].find(item => item && String(item._id) === String(id));
+}
+
+function viewApplicationDocument(id) {
+  const application = findApplicationForDocument(id);
+  const file = application?.document || {};
+  const sources = [application?.manualData?.student, application?.student, application?.extractedData?.student].filter(item => item && typeof item === "object");
+  const pick = key => sources.map(item => item[key]).find(Boolean);
+  openDocumentPreview({
+    title: file.originalName || "Ek-16 belgesi",
+    subtitle: [pick("name"), pick("studentNo")].filter(Boolean).join(" · "),
+    fileName: file.originalName,
+    load: () => window.EvraqaApi.applicationDocument(id, true),
+  });
+}
+
+async function downloadApplicationDocument(id) {
+  try {
+    const blob = await window.EvraqaApi.applicationDocument(id, false);
+    saveBlob(blob, findApplicationForDocument(id)?.document?.originalName);
+  } catch (error) { showToast(error.message, "!"); }
+}
+
+async function showDatasetRecords(batch) {
+  state.datasetRecords = { batch, loading: true };
+  renderDashboardPage("dataset");
+  try {
+    const response = await window.EvraqaApi.datasetRecords(batch);
+    state.datasetRecords = { batch, items: response.data };
+  } catch (error) {
+    state.datasetRecords = null;
+    showToast(error.message, "!");
+  }
+  if (state.page === "dataset") {
+    renderDashboardPage("dataset");
+    document.querySelector("#dataset-records")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+function viewDatasetFile(id) {
+  const record = state.datasetRecords?.items?.find(item => String(item._id) === String(id));
+  openDocumentPreview({
+    title: record?.sourceFile?.originalName || "Veri seti belgesi",
+    subtitle: [record?.name, record?.studentNo].filter(Boolean).join(" · "),
+    fileName: record?.sourceFile?.originalName,
+    load: () => window.EvraqaApi.datasetRecordFile(id, true),
+  });
+}
+
 function showToast(message, icon = "✓") {
   const toast = document.createElement("div");
   toast.className = "toast";
@@ -871,6 +1008,16 @@ document.addEventListener("click", event => {
   if (deleteButton) deleteAdminApplication(deleteButton.dataset.deleteApplication);
   const deleteDatasetButton = event.target.closest("[data-delete-dataset]");
   if (deleteDatasetButton) deleteDatasetBatch(deleteDatasetButton.dataset.deleteDataset);
+  const viewDocumentButton = event.target.closest("[data-view-document]");
+  if (viewDocumentButton) viewApplicationDocument(viewDocumentButton.dataset.viewDocument);
+  const downloadDocumentButton = event.target.closest("[data-download-document]");
+  if (downloadDocumentButton) downloadApplicationDocument(downloadDocumentButton.dataset.downloadDocument);
+  const datasetRecordsButton = event.target.closest("[data-dataset-records]");
+  if (datasetRecordsButton) showDatasetRecords(datasetRecordsButton.dataset.datasetRecords);
+  const datasetFileButton = event.target.closest("[data-view-dataset-file]");
+  if (datasetFileButton) viewDatasetFile(datasetFileButton.dataset.viewDatasetFile);
+  if (event.target.closest("[data-close-dataset-records]")) { state.datasetRecords = null; renderDashboardPage("dataset"); }
+  if (event.target.closest("[data-doc-close]") || event.target.id === "doc-preview") closeDocumentPreview();
 });
 
 document.addEventListener("change", event => {
@@ -1058,6 +1205,7 @@ document.addEventListener("keydown", event => {
     if (!loginModal.hidden) closeLogin();
     if (!uploadModal.hidden) closeUpload();
     if (!registerModal.hidden) closeRegister();
+    closeDocumentPreview();
   }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k" && !appShell.hidden) {
     event.preventDefault();
